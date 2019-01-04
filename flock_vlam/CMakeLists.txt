@@ -18,14 +18,14 @@ endif()
 # Emulate colcon
 if($ENV{CLION_IDE})
   message("Running inside CLion")
-  set(tello_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/tello_msgs/share/tello_msgs/cmake")
+  set(flock_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/flock_vlam_msgs/share/flock_vlam_msgs/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
 endif()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
-#find_package(flock_vlam_msgs REQUIRED)
+find_package(flock_vlam_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -48,7 +48,8 @@ include_directories(
 add_executable(vloc_node
   src/vloc_node.cpp
   src/map.cpp
-        )
+  src/eigen_util.cpp
+  )
 
 ament_target_dependencies(vloc_node
   cv_bridge
@@ -58,26 +59,27 @@ ament_target_dependencies(vloc_node
   rclcpp
   sensor_msgs
   std_msgs
-        )
+  )
 
 #=============
 # vmap node
 #=============
 
 add_executable(vmap_node
-        src/vmap_node.cpp
-        src/map.cpp
-        )
+  src/vmap_node.cpp
+  src/map.cpp
+  src/eigen_util.cpp
+  )
 
 ament_target_dependencies(vmap_node
-        cv_bridge
-        flock_vlam_msgs
-        geometry_msgs
-        OpenCV
-        rclcpp
-        sensor_msgs
-        std_msgs
-        )
+  cv_bridge
+  flock_vlam_msgs
+  geometry_msgs
+  OpenCV
+  rclcpp
+  sensor_msgs
+  std_msgs
+  )
 
 #=============
 # Install
