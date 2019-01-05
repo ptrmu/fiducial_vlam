@@ -12,9 +12,13 @@
 
 #include "eigen_util.hpp"
 
+// coordinate frame conventions
+//  t_destination_source is a transform
+//  xxx_f_destination means xxx is expressed in destination frame
+//  xxx_pose_f_destination is equivalent to t_destination_xxx
+
 namespace flock_vlam
 {
-
 
   class TransformWithCovariance
   {
@@ -44,19 +48,19 @@ namespace flock_vlam
     // The id of the marker
     int id_;
 
-    // The 2D coordinates of the corners in the image.
+    // The 2D pixel coordinates of the corners in the image.
     // The corners need to be in the same order as is returned
     // from cv::aruco::detectMarkers()
-    std::vector<cv::Point2f> corners_image_corner_;
+    std::vector<cv::Point2f> corners_f_image_;
 
   public:
     Observation() = default;
 
     Observation(int id, std::vector<cv::Point2f> corners_image_corner)
-    : id_(id), corners_image_corner_(corners_image_corner) {}
+    : id_(id), corners_f_image_(corners_image_corner) {}
 
     auto id() { return id_; }
-    auto corners_image_corner() { return corners_image_corner_; }
+    auto corners_f_image() { return corners_f_image_; }
   };
 
   class Observations
@@ -68,7 +72,7 @@ namespace flock_vlam
 
     auto observations() { return observations_; }
 
-    flock_vlam_msgs::msg::Observations to_msg(geometry_msgs::msg::PoseWithCovarianceStamped & t_map_camera);
+    flock_vlam_msgs::msg::Observations to_msg(geometry_msgs::msg::PoseWithCovarianceStamped & camera_pose_f_map_msg);
   };
 
   class Marker
@@ -77,7 +81,7 @@ namespace flock_vlam
     int id_;
 
     // The pose of the marker in the map frame
-    TransformWithCovariance t_map_marker_;
+    TransformWithCovariance marker_pose_f_map_;
 
     // Ids of other markers seen at the same time as this marker
     std::map<int, int> links;
@@ -85,23 +89,17 @@ namespace flock_vlam
   public:
     Marker() = default;
 
-    Marker(int id, TransformWithCovariance t_map_marker)
-      : id_(id), t_map_marker_(t_map_marker) {}
+    Marker(int id, TransformWithCovariance marker_pose_f_map)
+      : id_(id), marker_pose_f_map_(marker_pose_f_map) {}
 
     auto id() { return id_; }
-    auto t_map_marker() { return t_map_marker_; }
+    auto marker_pose_f_map() { return marker_pose_f_map_; }
+    auto t_map_marker() { return marker_pose_f_map_; }
 
-    // Return the 3D coordinates of the marker corners in the map frame.
+    // Return the 3D coordinate cv::Point3d vectors of the marker corners in the map frame.
     // These corners need to be in the same order as the corners returned
     // from cv::aruco::detectMarkers()
-    auto corners_map_corner(float marker_length) {
-      std::vector<cv::Point3d> corners_map_corner;
-      corners_map_corner.push_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
-      corners_map_corner.push_back(cv::Point3d( marker_length / 2.f, marker_length / 2.f, 0.f));
-      corners_map_corner.push_back(cv::Point3d( marker_length / 2.f,-marker_length / 2.f, 0.f));
-      corners_map_corner.push_back(cv::Point3d(-marker_length / 2.f,-marker_length / 2.f, 0.f));
-      return corners_map_corner;
-    }
+    std::vector<cv::Point3d> corners_f_map(float marker_length);
   };
 
   class Map
@@ -114,8 +112,8 @@ namespace flock_vlam
     explicit Map(rclcpp::Node & node);
 
     void load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg);
-    TransformWithCovariance estimate_t_map_camera(Observations & observations, float marker_length,
-                                                  cv::Mat camera_matrix, cv::Mat dist_coeffs);
+    TransformWithCovariance estimate_camera_pose_f_map(Observations &observations, float marker_length,
+                                                       cv::Mat camera_matrix, cv::Mat dist_coeffs);
   };
 } // namespace flock_vlam
 

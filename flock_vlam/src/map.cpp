@@ -25,13 +25,31 @@ namespace flock_vlam
 
   Observations::Observations(std::vector<int> ids, std::vector<std::vector<cv::Point2f>> corners)
   {
-
+    for (int i = 0; i < ids.size(); i += 1) {
+      observations_.push_back(Observation(ids[i], corners[i]));
+    }
   }
 
-  flock_vlam_msgs::msg::Observations Observations::to_msg(geometry_msgs::msg::PoseWithCovarianceStamped & t_map_camera)
+  flock_vlam_msgs::msg::Observations Observations::to_msg(geometry_msgs::msg::PoseWithCovarianceStamped & camera_pose_f_map_msg)
   {
     flock_vlam_msgs::msg::Observations msg;
     return msg;
+  }
+
+  std::vector<cv::Point3d> Marker::corners_f_map(float marker_length) {
+    std::vector<Eigen::Vector3d> corners_f_marker {
+      Eigen::Vector3d(-marker_length / 2.f, marker_length / 2.f, 0.f),
+      Eigen::Vector3d( marker_length / 2.f, marker_length / 2.f, 0.f),
+      Eigen::Vector3d( marker_length / 2.f,-marker_length / 2.f, 0.f),
+      Eigen::Vector3d(-marker_length / 2.f,-marker_length / 2.f, 0.f),
+    };
+    std::vector<cv::Point3d> corners_f_map;
+    auto tf_map_marker = t_map_marker().transform();
+    for (auto corner_f_marker : corners_f_marker)
+    {
+      corners_f_map.push_back(eigen_util::to_cvPoint3d(tf_map_marker * corner_f_marker));
+    }
+    return corners_f_map;
   }
 
   Map::Map(rclcpp::Node & node)
@@ -43,16 +61,15 @@ namespace flock_vlam
   {
   }
 
-  TransformWithCovariance Map::estimate_t_map_camera(Observations & observations, float marker_length,
-                                                     cv::Mat camera_matrix, cv::Mat dist_coeffs)
+  TransformWithCovariance Map::estimate_camera_pose_f_map(Observations &observations, float marker_length,
+                                                          cv::Mat camera_matrix, cv::Mat dist_coeffs)
   {
     // Find the ids of markers that we can see and that we have a location for.
     std::set<int> good_markers;
-    auto o_list = observations.observations();
-    for (auto it = o_list.begin(); it != o_list.end(); ++it) {
-      auto marker = markers_.find(it->id());
+    for (auto o : observations.observations()) {
+      auto marker = markers_.find(o.id());
       if (marker != markers_.end()) {
-        good_markers.insert(it->id());
+        good_markers.insert(o.id());
       }
     }
 
@@ -62,24 +79,26 @@ namespace flock_vlam
     }
 
     // Build up two lists of corner points: 2D in the image frame, 3D in the map frame
-    std::vector<cv::Point3d> all_corners_map_corner;
-    std::vector<cv::Point2f> all_corners_image_corner;
-    for (auto it = o_list.begin(); it != o_list.end(); ++it)
+    std::vector<cv::Point3d> all_corners_f_map;
+    std::vector<cv::Point2f> all_corners_f_image;
+    for (auto o : observations.observations())
     {
-      if (good_markers.count(it->id()) > 0) {
-        auto corners_map_corner = markers_.find(it->id())->second.corners_map_corner(marker_length);
-        auto corners_image_corner = it->corners_image_corner();
+      if (good_markers.count(o.id()) > 0) {
+        auto corners_f_map = markers_.find(o.id())->second.corners_f_map(marker_length);
+        auto corners_f_image = o.corners_f_image();
 
-        all_corners_map_corner.insert(all_corners_map_corner.end(),
-                                      corners_map_corner.begin(), corners_map_corner.end());
-        all_corners_image_corner.insert(all_corners_image_corner.end(),
-                                        corners_image_corner.begin(), corners_image_corner.end());
+        all_corners_f_map.insert(all_corners_f_map.end(),
+                                 corners_f_map.begin(), corners_f_map.end());
+        all_corners_f_image.insert(all_corners_f_image.end(),
+                                   corners_f_image.begin(), corners_f_image.end());
       }
     }
 
-    cv::Vec3d rvec;
-    cv::Vec3d tvec;
-    cv::solvePnP(all_corners_map_corner, all_corners_image_corner, camera_matrix, dist_coeffs, rvec, tvec);
+    // Figure out where the images was taken from: camera_pose_f_map.
+    cv::Vec3d rvec, tvec;
+    cv::solvePnP(all_corners_f_map, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
+
+    // ToDo: get some covariance estimate
 
     return TransformWithCovariance(rvec, tvec, 0.0);
   }

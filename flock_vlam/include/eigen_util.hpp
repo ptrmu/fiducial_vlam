@@ -15,6 +15,9 @@ namespace eigen_util {
   Eigen::Vector3d to_euler(const Eigen::Affine3d &transform);
   Eigen::Vector3d to_euler(const geometry_msgs::msg::Pose pose);
 
+  cv::Vec3d to_cvVec3d(const Eigen::Vector3d v);
+  cv::Point3d to_cvPoint3d(const Eigen::Vector3d v);
+
   geometry_msgs::msg::Pose to_pose(const Eigen::Affine3d &transform);
   geometry_msgs::msg::Pose to_pose(double tx, double ty, double tz, double qx, double qy, double qz, double qw);
 

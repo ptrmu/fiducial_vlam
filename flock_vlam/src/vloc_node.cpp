@@ -115,23 +115,23 @@ namespace flock_vlam {
 
       // Calculate the pose of this camera in the map frame.
       Observations observations(ids, corners);
-      auto t_map_camera = map_.estimate_t_map_camera(observations, marker_length_, camera_matrix_, dist_coeffs_);
+      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_, dist_coeffs_);
 
       // Publish the camera pose in the map frame
-      auto t_map_camera_msg = t_map_camera.to_msg(header_msg);
-      if (t_map_camera.is_valid()) {
-        camera_pose_pub_->publish(t_map_camera_msg);
+      auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
+      if (camera_pose_f_map.is_valid()) {
+        camera_pose_pub_->publish(camera_pose_f_map_msg);
       }
 
       // Publish the observations only if multiple markers exist in the image
       if (ids.size() > 1) {
-        auto observations_msg = observations.to_msg(t_map_camera_msg);
+        auto observations_msg = observations.to_msg(camera_pose_f_map_msg);
         observations_pub_->publish(observations_msg);
       }
     }
   };
 
-} // namespace detect_markers
+}
 
 int main(int argc, char **argv)
 {
