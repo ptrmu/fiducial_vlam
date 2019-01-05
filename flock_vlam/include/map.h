@@ -1,4 +1,0 @@
-#ifndef FLOCK_VLAM_MAP_H
-#define FLOCK_VLAM_MAP_H
-
-#endif //FLOCK_VLAM_MAP_H

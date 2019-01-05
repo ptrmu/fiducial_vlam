@@ -54,47 +54,87 @@ Eigen::Affine3d to_affine(const geometry_msgs::msg::Pose &pose)
   return result;
 }
 
-geometry_msgs::msg::Pose to_pose(const Eigen::Affine3d &transform)
-{
-  Eigen::Vector3d t = transform.translation();
-  Eigen::Quaterniond q;
-  q = transform.rotation();
+  geometry_msgs::msg::Pose to_pose(const Eigen::Affine3d &transform)
+  {
+    Eigen::Vector3d t = transform.translation();
+    Eigen::Quaterniond q;
+    q = transform.rotation();
 
-  geometry_msgs::msg::Pose result;
-  result.position.x = t.x();
-  result.position.y = t.y();
-  result.position.z = t.z();
-  result.orientation.x = q.x();
-  result.orientation.y = q.y();
-  result.orientation.z = q.z();
-  result.orientation.w = q.w();
-
-#ifdef DEBUG
-  assert(!is_nan(result));
-#endif
-
-  return result;
-}
-
-geometry_msgs::msg::Pose to_pose(double tx, double ty, double tz, double qx, double qy, double qz, double qw)
-{
-  geometry_msgs::msg::Pose result;
-  result.position.x = tx;
-  result.position.y = ty;
-  result.position.z = tz;
-  result.orientation.x = qx;
-  result.orientation.y = qy;
-  result.orientation.z = qz;
-  result.orientation.w = qw;
+    geometry_msgs::msg::Pose result;
+    result.position.x = t.x();
+    result.position.y = t.y();
+    result.position.z = t.z();
+    result.orientation.x = q.x();
+    result.orientation.y = q.y();
+    result.orientation.z = q.z();
+    result.orientation.w = q.w();
 
 #ifdef DEBUG
-  assert(!is_nan(result));
+    assert(!is_nan(result));
 #endif
 
-  return result;
-}
+    return result;
+  }
 
-Eigen::Vector3d to_euler(const Eigen::Affine3d &transform)
+  geometry_msgs::msg::Pose to_pose(double tx, double ty, double tz, double qx, double qy, double qz, double qw)
+  {
+    geometry_msgs::msg::Pose result;
+    result.position.x = tx;
+    result.position.y = ty;
+    result.position.z = tz;
+    result.orientation.x = qx;
+    result.orientation.y = qy;
+    result.orientation.z = qz;
+    result.orientation.w = qw;
+
+#ifdef DEBUG
+    assert(!is_nan(result));
+#endif
+
+    return result;
+  }
+
+  geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance(const Eigen::Affine3d &transform)
+  {
+    Eigen::Vector3d t = transform.translation();
+    Eigen::Quaterniond q;
+    q = transform.rotation();
+
+    geometry_msgs::msg::PoseWithCovariance result;
+    result.pose.position.x = t.x();
+    result.pose.position.y = t.y();
+    result.pose.position.z = t.z();
+    result.pose.orientation.x = q.x();
+    result.pose.orientation.y = q.y();
+    result.pose.orientation.z = q.z();
+    result.pose.orientation.w = q.w();
+
+#ifdef DEBUG
+    assert(!is_nan(result));
+#endif
+
+    return result;
+  }
+
+  geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance(double tx, double ty, double tz, double qx, double qy, double qz, double qw)
+  {
+    geometry_msgs::msg::PoseWithCovariance result;
+    result.pose.position.x = tx;
+    result.pose.position.y = ty;
+    result.pose.position.z = tz;
+    result.pose.orientation.x = qx;
+    result.pose.orientation.y = qy;
+    result.pose.orientation.z = qz;
+    result.pose.orientation.w = qw;
+
+#ifdef DEBUG
+    assert(!is_nan(result));
+#endif
+
+    return result;
+  }
+
+  Eigen::Vector3d to_euler(const Eigen::Affine3d &transform)
 {
   return transform.linear().eulerAngles(0, 1, 2);
 }

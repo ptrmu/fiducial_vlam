@@ -2,7 +2,6 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "flock_vlam_msgs/msg/map.hpp"
 #include "flock_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
@@ -13,13 +12,19 @@
 
 #include "eigen_util.hpp"
 
-namespace vmap_node {
+#include "map.hpp"
+
+namespace flock_vlam {
 
   class VmapNode : public rclcpp::Node
   {
+  private:
+    Map map_;
+
   public:
 
-    explicit VmapNode() : Node("vmap_node")
+    explicit VmapNode()
+    : Node("vmap_node"), map_(*this)
     {
       // ROS subscriptions
       auto observations_sub_cb = std::bind(&VmapNode::observations_callback, this, std::placeholders::_1);
@@ -30,8 +35,6 @@ namespace vmap_node {
       map_pub_ = create_publisher<flock_vlam_msgs::msg::Map>("/flock_map", 128);
 
     }
-
-    ~VmapNode() {}
 
   private:
 
@@ -55,7 +58,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Create node
-  auto node = std::make_shared<vmap_node::VmapNode>();
+  auto node = std::make_shared<flock_vlam::VmapNode>();
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin until rclcpp::ok() returns false
