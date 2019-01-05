@@ -35,6 +35,8 @@ namespace flock_vlam {
 
     cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
+    float marker_length_ {0.18};
+
   public:
 
     explicit VlocNode()
@@ -113,7 +115,7 @@ namespace flock_vlam {
 
       // Calculate the pose of this camera in the map frame.
       Observations observations(ids, corners);
-      TransformWithCovariance t_map_camera = map_.estimate_t_map_camera(observations);
+      auto t_map_camera = map_.estimate_t_map_camera(observations, marker_length_, camera_matrix_, dist_coeffs_);
 
       // Publish the camera pose in the map frame
       auto t_map_camera_msg = t_map_camera.to_msg(header_msg);
