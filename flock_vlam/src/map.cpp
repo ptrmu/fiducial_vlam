@@ -47,7 +47,7 @@ namespace flock_vlam
     auto tf_map_marker = t_map_marker().transform();
     for (auto corner_f_marker : corners_f_marker)
     {
-      corners_f_map.push_back(eigen_util::to_cvPoint3d(tf_map_marker * corner_f_marker));
+      corners_f_map.push_back(eigen_util::to_cv_Point3d(tf_map_marker * corner_f_marker));
     }
     return corners_f_map;
   }
@@ -55,6 +55,24 @@ namespace flock_vlam
   Map::Map(rclcpp::Node & node)
   : node_(node), markers_()
   {
+
+    // Create one entry in the map for now while debugging.
+    auto first_marker_id = 4;
+    Eigen::Vector3d t { 0, 0, 1 };
+    t.x() = 0;
+    t.y() = 0;
+    t.z() = 1;
+    Eigen::Quaterniond q;
+    q.x() = 0.5;
+    q.y() = -0.5;
+    q.z() = -0.5;
+    q.w() = 0.5;
+    auto first_marker_transform = Eigen::Affine3d();
+    first_marker_transform.translation() = t;
+    first_marker_transform.linear() = q.toRotationMatrix();
+    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
+    Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
+    markers_[first_marker_id] = first_marker;
   }
 
   void Map::load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg)
@@ -62,7 +80,7 @@ namespace flock_vlam
   }
 
   TransformWithCovariance Map::estimate_camera_pose_f_map(Observations &observations, float marker_length,
-                                                          cv::Mat camera_matrix, cv::Mat dist_coeffs)
+                                                          const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs)
   {
     // Find the ids of markers that we can see and that we have a location for.
     std::set<int> good_markers;
@@ -102,4 +120,39 @@ namespace flock_vlam
 
     return TransformWithCovariance(rvec, tvec, 0.0);
   }
+
+  // Compute marker poses using vlam info. Note this can only be done if
+  // a camera pose in map frame is determined and we have a marker pose in
+  // the map frame. The calculation is to take the marker location in the map
+  // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
+  // to get t_camera_marker.
+  void Map::markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
+                             std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
+  {
+    // Can not do this calculation without a camera pose.
+    if (!camera_pose_f_map.is_valid()) {
+      return;
+    }
+
+    auto t_camera_map = camera_pose_f_map.transform().inverse(Eigen::TransformTraits::Isometry);
+
+    // Loop through the ids of the markers visible in this image
+    for (auto id : ids) {
+      auto marker = markers_.find(id);
+      if (marker != markers_.end()) {
+
+        // Found a marker that is visible in the image and we have a pose_f_map
+        auto marker_pose_f_camera = t_camera_map * marker->second.marker_pose_f_map().transform();
+
+        // Convert the pose to an OpenCV transform
+        cv::Vec3d rvec, tvec;
+        eigen_util::to_cv_rvec_tvec(marker_pose_f_camera, rvec, tvec);
+
+        // Save this transform
+        rvecs.push_back(rvec);
+        tvecs.push_back(tvec);
+      }
+    }
+  }
 }
+

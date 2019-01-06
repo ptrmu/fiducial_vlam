@@ -57,6 +57,9 @@ namespace flock_vlam {
       camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 1);
       observations_pub_ = create_publisher<flock_vlam_msgs::msg::Observations>("/flock_observations", 1);
       image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
+
+
+      RCLCPP_INFO(get_logger(), "vloc_node ready");
     }
 
   private:
@@ -108,6 +111,8 @@ namespace flock_vlam {
       std::vector<std::vector<cv::Point2f>> corners;
       cv::aruco::detectMarkers(gray, dictionary_, corners, ids);
 
+      RCLCPP_INFO(get_logger(), "process_image: Found %d markers", ids.size());
+
       // Stop if no markers were detected
       if (ids.size() == 0) {
         return;
@@ -115,7 +120,8 @@ namespace flock_vlam {
 
       // Calculate the pose of this camera in the map frame.
       Observations observations(ids, corners);
-      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_, dist_coeffs_);
+      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_,
+                                                               dist_coeffs_);
 
       // Publish the camera pose in the map frame
       auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
@@ -128,7 +134,38 @@ namespace flock_vlam {
         auto observations_msg = observations.to_msg(camera_pose_f_map_msg);
         observations_pub_->publish(observations_msg);
       }
-    }
+
+      // Publish an annotated image
+      if (count_subscribers(image_marked_pub_->get_topic_name()) > 0) {
+
+        // Compute marker poses in two ways to verify that the math is working.
+        // Compute marker poses using OpenCV methods. The estimatePoseSingleMarkers() method
+        // returns the pose of the marker in the camera frame - t_camera_marker.
+        std::vector<cv::Vec3d> rvecs, tvecs;
+        cv::aruco::estimatePoseSingleMarkers(corners, marker_length_, camera_matrix_, dist_coeffs_, rvecs, tvecs);
+
+        // Compute marker poses using vlam info. Note this can only be done if
+        // a camera pose in map frame is determined and we have a marker pose in
+        // the map frame. The calculation is to take the marker location in the map
+        // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
+        // to get t_camera_marker.
+        std::vector<cv::Vec3d> rvecs_vlam, tvecs_vlam;
+        map_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_vlam, tvecs_vlam);
+
+        // Draw poses
+//        for (int i = 0; i < rvecs.size(); i++) {
+//          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs[i], tvecs[i], 0.1);
+//        }
+        //rvecs_vlam = rvecs;
+        tvecs_vlam = tvecs;
+        for (int i = 0; i < rvecs_vlam.size(); i++) {
+          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs_vlam[i], tvecs_vlam[i], 0.1);
+        }
+
+        // Publish result
+        image_marked_pub_->publish(color->toImageMsg());
+      }
+    };
   };
 
 }

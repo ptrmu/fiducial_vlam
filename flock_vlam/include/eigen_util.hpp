@@ -15,13 +15,14 @@ namespace eigen_util {
   Eigen::Vector3d to_euler(const Eigen::Affine3d &transform);
   Eigen::Vector3d to_euler(const geometry_msgs::msg::Pose pose);
 
-  cv::Vec3d to_cvVec3d(const Eigen::Vector3d v);
-  cv::Point3d to_cvPoint3d(const Eigen::Vector3d v);
+  cv::Vec3d to_cv_Vec3d(const Eigen::Vector3d v);
+  cv::Point3d to_cv_Point3d(const Eigen::Vector3d v);
+  void to_cv_rvec_tvec(const Eigen::Affine3d &transform, cv::Vec3d &rvec, cv::Vec3d &tvec);
 
   geometry_msgs::msg::Pose to_pose(const Eigen::Affine3d &transform);
   geometry_msgs::msg::Pose to_pose(double tx, double ty, double tz, double qx, double qy, double qz, double qw);
 
-  geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance(const Eigen::Affine3d &transform);
+  geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance(const Eigen::Affine3d &transform); // Todo: add covariance
   geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance(double tx, double ty, double tz, double qx, double qy, double qz, double qw);
 
   geometry_msgs::msg::Transform to_tf(const Eigen::Affine3d &transform);
