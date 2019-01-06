@@ -59,14 +59,21 @@ namespace flock_vlam
     // Create one entry in the map for now while debugging.
     auto first_marker_id = 4;
     Eigen::Vector3d t { 0, 0, 1 };
+//    t.x() = 0;
+//    t.y() = 0;
+//    t.z() = 1;
     t.x() = 0;
     t.y() = 0;
-    t.z() = 1;
+    t.z() = 0;
     Eigen::Quaterniond q;
-    q.x() = 0.5;
-    q.y() = -0.5;
-    q.z() = -0.5;
-    q.w() = 0.5;
+//    q.x() = 0.5;
+//    q.y() = -0.5;
+//    q.z() = -0.5;
+//    q.w() = 0.5;
+    q.x() = 0;
+    q.y() = 0;
+    q.z() = 0;
+    q.w() = 1;
     auto first_marker_transform = Eigen::Affine3d();
     first_marker_transform.translation() = t;
     first_marker_transform.linear() = q.toRotationMatrix();
@@ -116,13 +123,18 @@ namespace flock_vlam
     cv::Vec3d rvec, tvec;
     cv::solvePnP(all_corners_f_map, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
 
-    // ToDo: get some covariance estimate
+    // rvec, tvec output from solvePnp "brings points from the model coordinate system to the
+    // camera coordinate system". In our case the map frame is the model coordinate system.
+    // So rvec, tvec are the transformation t_camera_map. This function returns camera_pose_f_map
+    // or equivalently t_map_camera. Invert the rvec, tvec transform before returning it.
+    auto t_map_camera = eigen_util::to_affine(rvec, tvec).inverse(Eigen::TransformTraits::Isometry);
 
-    return TransformWithCovariance(rvec, tvec, 0.0);
+    // ToDo: get some covariance estimate
+    return TransformWithCovariance(t_map_camera, 0.0);
   }
 
-  // Compute marker poses using vlam info. Note this can only be done if
-  // a camera pose in map frame is determined and we have a marker pose in
+  // Compute marker poses using Map info. Note this can only be done if
+  // a camera pose in the map frame is determined and we have a marker's pose in
   // the map frame. The calculation is to take the marker location in the map
   // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
   // to get t_camera_marker.
@@ -141,12 +153,14 @@ namespace flock_vlam
       auto marker = markers_.find(id);
       if (marker != markers_.end()) {
 
-        // Found a marker that is visible in the image and we have a pose_f_map
-        auto marker_pose_f_camera = t_camera_map * marker->second.marker_pose_f_map().transform();
+        // Found a marker that is visible in the image and we have a pose_f_map.
+        // Calculate marker_pose_f_camera or equivalently t_camera_marker
+        auto t_map_marker = marker->second.marker_pose_f_map().transform();
+        auto t_camera_marker = t_camera_map * t_map_marker;
 
         // Convert the pose to an OpenCV transform
         cv::Vec3d rvec, tvec;
-        eigen_util::to_cv_rvec_tvec(marker_pose_f_camera, rvec, tvec);
+        eigen_util::to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
 
         // Save this transform
         rvecs.push_back(rvec);

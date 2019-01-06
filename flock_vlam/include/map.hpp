@@ -30,7 +30,7 @@ namespace flock_vlam
     TransformWithCovariance() = default;
 
     TransformWithCovariance(const Eigen::Affine3d & transform, double variance)
-      : transform_(transform), variance_(variance) {}
+      : is_valid_(true), transform_(transform), variance_(variance) {}
 
     TransformWithCovariance(const cv::Vec3d & rvec, const cv::Vec3d & tvec, double variance)
       : is_valid_(true), transform_(eigen_util::to_affine(rvec, tvec)), variance_(variance) {}

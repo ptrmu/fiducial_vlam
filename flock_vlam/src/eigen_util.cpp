@@ -23,7 +23,7 @@ namespace eigen_util {
     Eigen::Matrix3d R;
     for (int row = 0; row < 3; row++) {
       for (int col = 0; col < 3; col++) {
-        R(row, col) = rmat.at<double>(row, col);  // Row- vs. column-major order
+        R(col, row) = rmat.at<double>(row, col);  // Row- vs. column-major order
       }
     }
 
@@ -95,7 +95,7 @@ namespace eigen_util {
     cv::Mat rmat(3, 3, CV_64FC1);
     for (int row = 0; row < 3; row++) {
       for (int col = 0; col < 3; col++) {
-        rmat.at<double>(row, col) = R(row, col);  // Row- vs. column-major order
+        rmat.at<double>(row, col) = R(col, row);  // Row- vs. column-major order
       }
     }
 

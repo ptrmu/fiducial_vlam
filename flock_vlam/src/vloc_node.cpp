@@ -149,17 +149,17 @@ namespace flock_vlam {
         // the map frame. The calculation is to take the marker location in the map
         // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
         // to get t_camera_marker.
-        std::vector<cv::Vec3d> rvecs_vlam, tvecs_vlam;
-        map_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_vlam, tvecs_vlam);
+        std::vector<cv::Vec3d> rvecs_map, tvecs_map;
+        map_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_map, tvecs_map);
 
         // Draw poses
 //        for (int i = 0; i < rvecs.size(); i++) {
 //          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs[i], tvecs[i], 0.1);
 //        }
-        //rvecs_vlam = rvecs;
-        tvecs_vlam = tvecs;
-        for (int i = 0; i < rvecs_vlam.size(); i++) {
-          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs_vlam[i], tvecs_vlam[i], 0.1);
+        //rvecs_map = rvecs;
+        //tvecs_map = tvecs;
+        for (int i = 0; i < rvecs_map.size(); i++) {
+          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs_map[i], tvecs_map[i], 0.1);
         }
 
         // Publish result
