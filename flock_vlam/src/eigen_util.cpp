@@ -66,7 +66,7 @@ namespace eigen_util {
     return q.toRotationMatrix().eulerAngles(0, 1, 2);
   }
 
-  cv::Vec3d to_cvVec3d(const Eigen::Vector3d v)
+  cv::Vec3d to_cv_Vec3d(const Eigen::Vector3d v)
   {
     cv::Vec3d result;
     result.val[0] = v.x();
@@ -75,13 +75,31 @@ namespace eigen_util {
     return result;
   }
 
-  cv::Point3d to_cvPoint3d(const Eigen::Vector3d v)
+  cv::Point3d to_cv_Point3d(const Eigen::Vector3d v)
   {
     cv::Point3d result;
     result.x = v.x();
     result.y = v.y();
     result.z = v.z();
     return result;
+  }
+
+  void to_cv_rvec_tvec(const Eigen::Affine3d &transform, cv::Vec3d &rvec, cv::Vec3d &tvec)
+  {
+    Eigen::Vector3d t = transform.translation();
+    tvec.val[0] = t.x();
+    tvec.val[1] = t.y();
+    tvec.val[2] = t.z();
+
+    Eigen::Matrix3d R = transform.linear();
+    cv::Mat rmat(3, 3, CV_64FC1);
+    for (int row = 0; row < 3; row++) {
+      for (int col = 0; col < 3; col++) {
+        rmat.at<double>(row, col) = R(col, row);  // Row- vs. column-major order
+      }
+    }
+
+    cv::Rodrigues(rmat, rvec);
   }
 
   geometry_msgs::msg::Pose to_pose(const Eigen::Affine3d &transform)

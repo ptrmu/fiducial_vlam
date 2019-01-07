@@ -30,14 +30,14 @@ namespace flock_vlam
     TransformWithCovariance() = default;
 
     TransformWithCovariance(const Eigen::Affine3d & transform, double variance)
-      : transform_(transform), variance_(variance) {}
+      : is_valid_(true), transform_(transform), variance_(variance) {}
 
     TransformWithCovariance(const cv::Vec3d & rvec, const cv::Vec3d & tvec, double variance)
-      : transform_(eigen_util::to_affine(rvec, tvec)), variance_(variance) {}
+      : is_valid_(true), transform_(eigen_util::to_affine(rvec, tvec)), variance_(variance) {}
 
-    auto is_valid() { return is_valid_; }
-    auto transform() { return transform_; }
-    auto variance() { return variance_; }
+    auto is_valid() const { return is_valid_; }
+    auto transform() const { return transform_; }
+    auto variance() const { return variance_; }
 
     geometry_msgs::msg::PoseWithCovariance to_msg();
     geometry_msgs::msg::PoseWithCovarianceStamped to_msg(std_msgs::msg::Header & header);
@@ -59,8 +59,8 @@ namespace flock_vlam
     Observation(int id, std::vector<cv::Point2f> corners_image_corner)
     : id_(id), corners_f_image_(corners_image_corner) {}
 
-    auto id() { return id_; }
-    auto corners_f_image() { return corners_f_image_; }
+    auto id() const { return id_; }
+    auto corners_f_image() const { return corners_f_image_; }
   };
 
   class Observations
@@ -92,9 +92,9 @@ namespace flock_vlam
     Marker(int id, TransformWithCovariance marker_pose_f_map)
       : id_(id), marker_pose_f_map_(marker_pose_f_map) {}
 
-    auto id() { return id_; }
-    auto marker_pose_f_map() { return marker_pose_f_map_; }
-    auto t_map_marker() { return marker_pose_f_map_; }
+    auto id() const { return id_; }
+    auto marker_pose_f_map() const { return marker_pose_f_map_; }
+    auto t_map_marker() const { return marker_pose_f_map_; }
 
     // Return the 3D coordinate cv::Point3d vectors of the marker corners in the map frame.
     // These corners need to be in the same order as the corners returned
@@ -113,7 +113,9 @@ namespace flock_vlam
 
     void load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg);
     TransformWithCovariance estimate_camera_pose_f_map(Observations &observations, float marker_length,
-                                                       cv::Mat camera_matrix, cv::Mat dist_coeffs);
+                                                       const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs);
+    void markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
+                               std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs);
   };
 } // namespace flock_vlam
 

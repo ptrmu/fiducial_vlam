@@ -47,7 +47,7 @@ namespace flock_vlam
     auto tf_map_marker = t_map_marker().transform();
     for (auto corner_f_marker : corners_f_marker)
     {
-      corners_f_map.push_back(eigen_util::to_cvPoint3d(tf_map_marker * corner_f_marker));
+      corners_f_map.push_back(eigen_util::to_cv_Point3d(tf_map_marker * corner_f_marker));
     }
     return corners_f_map;
   }
@@ -55,6 +55,31 @@ namespace flock_vlam
   Map::Map(rclcpp::Node & node)
   : node_(node), markers_()
   {
+
+    // Create one entry in the map for now while debugging.
+    auto first_marker_id = 4;
+    Eigen::Vector3d t { 0, 0, 1 };
+//    t.x() = 0;
+//    t.y() = 0;
+//    t.z() = 1;
+    t.x() = 0;
+    t.y() = 0;
+    t.z() = 0;
+    Eigen::Quaterniond q;
+//    q.x() = 0.5;
+//    q.y() = -0.5;
+//    q.z() = -0.5;
+//    q.w() = 0.5;
+    q.x() = 0;
+    q.y() = 0;
+    q.z() = 0;
+    q.w() = 1;
+    auto first_marker_transform = Eigen::Affine3d();
+    first_marker_transform.translation() = t;
+    first_marker_transform.linear() = q.toRotationMatrix();
+    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
+    Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
+    markers_[first_marker_id] = first_marker;
   }
 
   void Map::load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg)
@@ -62,7 +87,7 @@ namespace flock_vlam
   }
 
   TransformWithCovariance Map::estimate_camera_pose_f_map(Observations &observations, float marker_length,
-                                                          cv::Mat camera_matrix, cv::Mat dist_coeffs)
+                                                          const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs)
   {
     // Find the ids of markers that we can see and that we have a location for.
     std::set<int> good_markers;
@@ -98,8 +123,50 @@ namespace flock_vlam
     cv::Vec3d rvec, tvec;
     cv::solvePnP(all_corners_f_map, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
 
-    // ToDo: get some covariance estimate
+    // rvec, tvec output from solvePnp "brings points from the model coordinate system to the
+    // camera coordinate system". In our case the map frame is the model coordinate system.
+    // So rvec, tvec are the transformation t_camera_map. This function returns camera_pose_f_map
+    // or equivalently t_map_camera. Invert the rvec, tvec transform before returning it.
+    auto t_map_camera = eigen_util::to_affine(rvec, tvec).inverse(Eigen::TransformTraits::Isometry);
 
-    return TransformWithCovariance(rvec, tvec, 0.0);
+    // ToDo: get some covariance estimate
+    return TransformWithCovariance(t_map_camera, 0.0);
+  }
+
+  // Compute marker poses using Map info. Note this can only be done if
+  // a camera pose in the map frame is determined and we have a marker's pose in
+  // the map frame. The calculation is to take the marker location in the map
+  // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
+  // to get t_camera_marker.
+  void Map::markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
+                             std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
+  {
+    // Can not do this calculation without a camera pose.
+    if (!camera_pose_f_map.is_valid()) {
+      return;
+    }
+
+    auto t_camera_map = camera_pose_f_map.transform().inverse(Eigen::TransformTraits::Isometry);
+
+    // Loop through the ids of the markers visible in this image
+    for (auto id : ids) {
+      auto marker = markers_.find(id);
+      if (marker != markers_.end()) {
+
+        // Found a marker that is visible in the image and we have a pose_f_map.
+        // Calculate marker_pose_f_camera or equivalently t_camera_marker
+        auto t_map_marker = marker->second.marker_pose_f_map().transform();
+        auto t_camera_marker = t_camera_map * t_map_marker;
+
+        // Convert the pose to an OpenCV transform
+        cv::Vec3d rvec, tvec;
+        eigen_util::to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
+
+        // Save this transform
+        rvecs.push_back(rvec);
+        tvecs.push_back(tvec);
+      }
+    }
   }
 }
+
