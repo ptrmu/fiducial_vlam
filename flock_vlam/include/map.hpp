@@ -2,11 +2,11 @@
 #define FLOCK_VLAM_MAP_H
 
 #include <map>
-#include <flock_vlam_msgs/msg/observations__struct.hpp>
 
 #include "rclcpp/rclcpp.hpp"
 
 #include "flock_vlam_msgs/msg/map.hpp"
+#include <flock_vlam_msgs/msg/observations.hpp>
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "std_msgs/msg/header.hpp"
 
@@ -116,6 +116,7 @@ namespace flock_vlam
                                                        const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs);
     void markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
                                std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs);
+    void log_transform(std::string prefix, Eigen::Affine3d transform);
   };
 } // namespace flock_vlam
 

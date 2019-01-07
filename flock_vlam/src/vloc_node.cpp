@@ -34,8 +34,9 @@ namespace flock_vlam {
     cv::Mat dist_coeffs_;
 
     cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+    cv::Ptr<cv::aruco::DetectorParameters> detectorParameters_ = cv::aruco::DetectorParameters::create();
 
-    float marker_length_ {0.18};
+    float marker_length_ {0.18415};
 
   public:
 
@@ -58,6 +59,7 @@ namespace flock_vlam {
       observations_pub_ = create_publisher<flock_vlam_msgs::msg::Observations>("/flock_observations", 1);
       image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
 
+      detectorParameters_->doCornerRefinement = true;
 
       RCLCPP_INFO(get_logger(), "vloc_node ready");
     }
@@ -109,7 +111,7 @@ namespace flock_vlam {
       // Detect markers
       std::vector<int> ids;
       std::vector<std::vector<cv::Point2f>> corners;
-      cv::aruco::detectMarkers(gray, dictionary_, corners, ids);
+      cv::aruco::detectMarkers(gray, dictionary_, corners, ids, detectorParameters_);
 
       RCLCPP_INFO(get_logger(), "process_image: Found %d markers", ids.size());
 
