@@ -1,10 +1,10 @@
 #ifndef EIGEN_UTIL_HPP
 #define EIGEN_UTIL_HPP
 
-#include <geometry_msgs/msg/transform__struct.hpp>
 #include "eigen3/Eigen/Geometry"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
+#include <geometry_msgs/msg/transform.hpp>
 #include "opencv2/core.hpp"
 
 namespace eigen_util {

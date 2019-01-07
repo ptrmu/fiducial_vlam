@@ -62,7 +62,7 @@ namespace flock_vlam
 //    t.x() = 0;
 //    t.y() = 0;
 //    t.z() = 1;
-    t.x() = 0;
+    t.x() = 10;
     t.y() = 0;
     t.z() = 0;
     Eigen::Quaterniond q;
@@ -129,6 +129,12 @@ namespace flock_vlam
     // or equivalently t_map_camera. Invert the rvec, tvec transform before returning it.
     auto t_map_camera = eigen_util::to_affine(rvec, tvec).inverse(Eigen::TransformTraits::Isometry);
 
+
+//    auto &c = all_corners_f_image;
+//    RCLCPP_INFO(node_.get_logger(), "corners 0:%f,%f 1:%f,%f 2:%f,%f 3:%f,%f",
+//               c[0].x, c[0].y, c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y);
+//    log_transform("t_map_camera", t_map_camera);
+
     // ToDo: get some covariance estimate
     return TransformWithCovariance(t_map_camera, 0.0);
   }
@@ -167,6 +173,14 @@ namespace flock_vlam
         tvecs.push_back(tvec);
       }
     }
+  }
+
+  void Map::log_transform(std::string prefix, Eigen::Affine3d transform)
+  {
+    auto rpy = transform.linear().eulerAngles(0, 1, 2);
+    auto t = transform.translation();
+    RCLCPP_INFO(node_.get_logger(), "%s x,y,z:%lf,%lf,%lf r,p,y:%lf,%lf,%lf", prefix.c_str(),
+      t.x(), t.y(), t.z(), rpy[0], rpy[1], rpy[2]);
   }
 }
 
