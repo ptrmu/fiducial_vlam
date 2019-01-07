@@ -3,22 +3,44 @@
 
 #include "flock_vlam_msgs/msg/map.hpp"
 #include "flock_vlam_msgs/msg/observations.hpp"
-#include "geometry_msgs/msg/pose_with_covariance.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "std_msgs/msg/header.hpp"
 
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/aruco.hpp"
 
 #include "eigen_util.hpp"
+#include "map.hpp"
 
-namespace vloc_node {
+namespace flock_vlam {
 
   class VlocNode : public rclcpp::Node
   {
+  private:
+    Map map_;
+
+    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
+    rclcpp::Subscription<flock_vlam_msgs::msg::Map>::SharedPtr map_sub_;
+
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_;
+    rclcpp::Publisher<flock_vlam_msgs::msg::Observations>::SharedPtr observations_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
+
+    bool have_camera_info_{false};
+    cv::Mat camera_matrix_;
+    cv::Mat dist_coeffs_;
+
+    cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+
+    float marker_length_ {0.18};
+
   public:
 
-    explicit VlocNode() : Node("vloc_node")
+    explicit VlocNode()
+    : Node("vloc_node"), map_(*this)
     {
       // ROS subscriptions
       auto cameraInfo_cb = std::bind(&VlocNode::camera_info_callback, this, std::placeholders::_1);
@@ -32,13 +54,10 @@ namespace vloc_node {
 
 
       // ROS publishers
-      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovariance>("camera_pose", 1);
+      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 1);
       observations_pub_ = create_publisher<flock_vlam_msgs::msg::Observations>("/flock_observations", 1);
       image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
-
     }
-
-    ~VlocNode() {}
 
   private:
 
@@ -65,29 +84,54 @@ namespace vloc_node {
       }
     }
 
-    void image_callback(const sensor_msgs::msg::Image::SharedPtr image_msg)
+    void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
     {
+      // Convert ROS to OpenCV
+      cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(msg);
+
+      process_image(color, msg->header);
     }
 
     void map_callback(const flock_vlam_msgs::msg::Map::SharedPtr msg)
     {
+      map_.load_from_msg(msg);
     }
 
-    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
-    rclcpp::Subscription<flock_vlam_msgs::msg::Map>::SharedPtr map_sub_;
+    void process_image(cv_bridge::CvImagePtr color, std_msgs::msg::Header & header_msg)
+    {
+      // Color to gray for detection
+      cv::Mat gray;
+      cv::cvtColor(color->image, gray, cv::COLOR_BGR2GRAY);
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovariance>::SharedPtr camera_pose_pub_;
-    rclcpp::Publisher<flock_vlam_msgs::msg::Observations>::SharedPtr observations_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
+      // Detect markers
+      std::vector<int> ids;
+      std::vector<std::vector<cv::Point2f>> corners;
+      cv::aruco::detectMarkers(gray, dictionary_, corners, ids);
 
-    cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-    bool have_camera_info_{false};
-    cv::Mat camera_matrix_;
-    cv::Mat dist_coeffs_;
+      // Stop if no markers were detected
+      if (ids.size() == 0) {
+        return;
+      }
+
+      // Calculate the pose of this camera in the map frame.
+      Observations observations(ids, corners);
+      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_, dist_coeffs_);
+
+      // Publish the camera pose in the map frame
+      auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
+      if (camera_pose_f_map.is_valid()) {
+        camera_pose_pub_->publish(camera_pose_f_map_msg);
+      }
+
+      // Publish the observations only if multiple markers exist in the image
+      if (ids.size() > 1) {
+        auto observations_msg = observations.to_msg(camera_pose_f_map_msg);
+        observations_pub_->publish(observations_msg);
+      }
+    }
   };
 
-} // namespace detect_markers
+}
 
 int main(int argc, char **argv)
 {
@@ -98,7 +142,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Create node
-  auto node = std::make_shared<vloc_node::VlocNode>();
+  auto node = std::make_shared<flock_vlam::VlocNode>();
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin until rclcpp::ok() returns false
