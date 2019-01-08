@@ -28,6 +28,7 @@ namespace flock_vlam {
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
 
     bool have_camera_info_{false};
+    sensor_msgs::msg::CameraInfo cameraInfo_;
     cv::Mat camera_matrix_;
     cv::Mat dist_coeffs_;
 
@@ -67,20 +68,9 @@ namespace flock_vlam {
     void camera_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg)
     {
       if (!have_camera_info_) {
-        camera_matrix_ = cv::Mat(3, 3, CV_64F, 0.);
-        camera_matrix_.at<double>(0, 0) = msg->k[0];
-        camera_matrix_.at<double>(0, 2) = msg->k[2];
-        camera_matrix_.at<double>(1, 1) = msg->k[4];
-        camera_matrix_.at<double>(1, 2) = msg->k[5];
-        camera_matrix_.at<double>(2, 2) = 1.;
-
-        // ROS and OpenCV (and everybody?) agree on this ordering: k1, k2, t1 (p1), t2 (p2), k3
-        dist_coeffs_ = cv::Mat(1, 5, CV_64F);
-        dist_coeffs_.at<double>(0) = msg->d[0];
-        dist_coeffs_.at<double>(1) = msg->d[1];
-        dist_coeffs_.at<double>(2) = msg->d[2];
-        dist_coeffs_.at<double>(3) = msg->d[3];
-        dist_coeffs_.at<double>(4) = msg->d[4];
+        // Save the info message because we pass it along with the observations.
+        cameraInfo_ = *msg;
+        map_.load_camera_info(*msg, camera_matrix_, dist_coeffs_);
 
         RCLCPP_INFO(get_logger(), "have camera info");
         have_camera_info_ = true;
@@ -89,6 +79,10 @@ namespace flock_vlam {
 
     void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
     {
+      if (!have_camera_info_) {
+        return;
+      }
+
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(msg);
 
@@ -100,7 +94,7 @@ namespace flock_vlam {
       map_.load_from_msg(msg);
     }
 
-    void process_image(cv_bridge::CvImagePtr color, std_msgs::msg::Header & header_msg)
+    void process_image(cv_bridge::CvImagePtr color, std_msgs::msg::Header &header_msg)
     {
       // Color to gray for detection
       cv::Mat gray;
@@ -131,7 +125,7 @@ namespace flock_vlam {
 
       // Publish the observations only if multiple markers exist in the image
       if (ids.size() > 1) {
-        auto observations_msg = observations.to_msg(camera_pose_f_map_msg);
+        auto observations_msg = observations.to_msg(header_msg, cameraInfo_);
         observations_pub_->publish(observations_msg);
       }
 

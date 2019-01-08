@@ -34,7 +34,7 @@ include_directories(
 
 set(msg_files
     "msg/Map.msg"
-    "msg/ObservationsEntry.msg"
+    "msg/Observation.msg"
     "msg/Observations.msg"
     )
 

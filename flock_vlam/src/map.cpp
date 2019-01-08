@@ -39,10 +39,32 @@ namespace flock_vlam
     }
   }
 
-  flock_vlam_msgs::msg::Observations Observations::to_msg(geometry_msgs::msg::PoseWithCovarianceStamped & camera_pose_f_map_msg)
+  Observations::Observations(const flock_vlam_msgs::msg::Observations &msg)
+  {
+    for (auto o : msg.observations) {
+
+      observations_.push_back(Observation(o));
+    }
+  }
+
+  flock_vlam_msgs::msg::Observations Observations::to_msg(const std_msgs::msg::Header &header_msg,
+                                                          const sensor_msgs::msg::CameraInfo &camera_info_msg)
   {
     flock_vlam_msgs::msg::Observations msg;
-    // ToDo
+    msg.header = header_msg;
+    msg.camera_info = camera_info_msg;
+    for (auto observation : observations_) {
+      flock_vlam_msgs::msg::Observation obs_msg;
+      obs_msg.x0 = observation.corners_f_image()[0].x;
+      obs_msg.x1 = observation.corners_f_image()[1].x;
+      obs_msg.x2 = observation.corners_f_image()[2].x;
+      obs_msg.x3 = observation.corners_f_image()[3].x;
+      obs_msg.y0 = observation.corners_f_image()[0].y;
+      obs_msg.y1 = observation.corners_f_image()[1].y;
+      obs_msg.y2 = observation.corners_f_image()[2].y;
+      obs_msg.y3 = observation.corners_f_image()[3].y;
+      msg.observations.push_back(obs_msg);
+    }
     return msg;
   }
 
@@ -235,6 +257,36 @@ namespace flock_vlam
         tvecs.push_back(tvec);
       }
     }
+  }
+
+  bool Map::update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
+                       const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs, const std_msgs::msg::Header &header_msg)
+  {
+    return false;
+  }
+
+  flock_vlam_msgs::msg::Observations Map::to_map_msg()
+  {
+    flock_vlam_msgs::msg::Observations map_msg;
+    return map_msg;
+  }
+
+  void Map::load_camera_info(const sensor_msgs::msg::CameraInfo &msg, cv::Mat &camera_matrix, cv::Mat &dist_coeffs)
+  {
+    camera_matrix = cv::Mat(3, 3, CV_64F, 0.);
+    camera_matrix.at<double>(0, 0) = msg.k[0];
+    camera_matrix.at<double>(0, 2) = msg.k[2];
+    camera_matrix.at<double>(1, 1) = msg.k[4];
+    camera_matrix.at<double>(1, 2) = msg.k[5];
+    camera_matrix.at<double>(2, 2) = 1.;
+
+    // ROS and OpenCV (and everybody?) agree on this ordering: k1, k2, t1 (p1), t2 (p2), k3
+    dist_coeffs = cv::Mat(1, 5, CV_64F);
+    dist_coeffs.at<double>(0) = msg.d[0];
+    dist_coeffs.at<double>(1) = msg.d[1];
+    dist_coeffs.at<double>(2) = msg.d[2];
+    dist_coeffs.at<double>(3) = msg.d[3];
+    dist_coeffs.at<double>(4) = msg.d[4];
   }
 }
 

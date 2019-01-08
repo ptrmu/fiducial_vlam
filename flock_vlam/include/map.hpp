@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "flock_vlam_msgs/msg/map.hpp"
+#include "flock_vlam_msgs/msg/observation.hpp"
 #include "flock_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "std_msgs/msg/header.hpp"
@@ -60,6 +61,14 @@ namespace flock_vlam
 
     Observation(int id, std::vector<cv::Point2f> corners_image_corner)
     : id_(id), corners_f_image_(corners_image_corner) {}
+    explicit Observation(const flock_vlam_msgs::msg::Observation &msg)
+    : id_(msg.id), corners_f_image_ {
+      cv::Point2f(msg.x0, msg.y0),
+      cv::Point2f(msg.x1, msg.y1),
+      cv::Point2f(msg.x2, msg.y2),
+      cv::Point2f(msg.x3, msg.y3)
+      }
+    {}
 
     auto id() const { return id_; }
     auto corners_f_image() const { return corners_f_image_; }
@@ -71,10 +80,12 @@ namespace flock_vlam
 
   public:
     Observations(std::vector<int> ids, std::vector<std::vector<cv::Point2f>> corners);
+    explicit Observations(const flock_vlam_msgs::msg::Observations &msg);
 
     auto observations() { return observations_; }
 
-    flock_vlam_msgs::msg::Observations to_msg(geometry_msgs::msg::PoseWithCovarianceStamped & camera_pose_f_map_msg);
+    flock_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
+                                              const sensor_msgs::msg::CameraInfo &camera_info_msg);
   };
 
   class Marker
@@ -120,6 +131,12 @@ namespace flock_vlam
     void markers_pose_f_camera_tf2(Observations &observations, float marker_length,
                                    const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs,
                                    std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs);
+
+    bool update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
+                    const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs, const std_msgs::msg::Header &header_msg);
+    flock_vlam_msgs::msg::Observations to_map_msg();
+
+    void load_camera_info(const sensor_msgs::msg::CameraInfo &msg, cv::Mat &camera_matrix, cv::Mat &dist_coeffs);
   };
 } // namespace flock_vlam
 
