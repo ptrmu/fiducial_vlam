@@ -11,14 +11,12 @@
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/aruco.hpp"
 
-#include "eigen_util.hpp"
 #include "map.hpp"
 
 namespace flock_vlam {
 
   class VlocNode : public rclcpp::Node
   {
-  private:
     Map map_;
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
@@ -143,8 +141,8 @@ namespace flock_vlam {
         // Compute marker poses in two ways to verify that the math is working.
         // Compute marker poses using OpenCV methods. The estimatePoseSingleMarkers() method
         // returns the pose of the marker in the camera frame - t_camera_marker.
-        std::vector<cv::Vec3d> rvecs, tvecs;
-        cv::aruco::estimatePoseSingleMarkers(corners, marker_length_, camera_matrix_, dist_coeffs_, rvecs, tvecs);
+//        std::vector<cv::Vec3d> rvecs, tvecs;
+//        cv::aruco::estimatePoseSingleMarkers(corners, marker_length_, camera_matrix_, dist_coeffs_, rvecs, tvecs);
 
         // Compute marker poses using vlam info. Note this can only be done if
         // a camera pose in map frame is determined and we have a marker pose in
@@ -158,8 +156,6 @@ namespace flock_vlam {
 //        for (int i = 0; i < rvecs.size(); i++) {
 //          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs[i], tvecs[i], 0.1);
 //        }
-        //rvecs_map = rvecs;
-        //tvecs_map = tvecs;
         for (int i = 0; i < rvecs_map.size(); i++) {
           cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs_map[i], tvecs_map[i], 0.1);
         }

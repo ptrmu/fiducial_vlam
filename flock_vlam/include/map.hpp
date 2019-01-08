@@ -6,11 +6,13 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "flock_vlam_msgs/msg/map.hpp"
-#include <flock_vlam_msgs/msg/observations.hpp>
+#include "flock_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "std_msgs/msg/header.hpp"
 
-#include "eigen_util.hpp"
+#include "tf2/LinearMath/Transform.h"
+
+#include "tf2_util.hpp"
 
 // coordinate frame conventions
 //  t_destination_source is a transform
@@ -23,17 +25,17 @@ namespace flock_vlam
   class TransformWithCovariance
   {
     bool is_valid_ {false};
-    Eigen::Affine3d transform_;
+    tf2::Transform transform_;
     double variance_; // add more dimensions to this at some point
 
   public:
     TransformWithCovariance() = default;
 
-    TransformWithCovariance(const Eigen::Affine3d & transform, double variance)
+    TransformWithCovariance(const tf2::Transform & transform, double variance)
       : is_valid_(true), transform_(transform), variance_(variance) {}
 
     TransformWithCovariance(const cv::Vec3d & rvec, const cv::Vec3d & tvec, double variance)
-      : is_valid_(true), transform_(eigen_util::to_affine(rvec, tvec)), variance_(variance) {}
+      : is_valid_(true), transform_(tf2_util::to_tf2_transform(rvec, tvec)), variance_(variance) {}
 
     auto is_valid() const { return is_valid_; }
     auto transform() const { return transform_; }
@@ -104,7 +106,6 @@ namespace flock_vlam
 
   class Map
   {
-  private:
     const rclcpp::Node & node_;
     std::map<int, Marker> markers_;
 
@@ -116,7 +117,9 @@ namespace flock_vlam
                                                        const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs);
     void markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
                                std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs);
-    void log_transform(std::string prefix, Eigen::Affine3d transform);
+    void markers_pose_f_camera_tf2(Observations &observations, float marker_length,
+                                   const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs,
+                                   std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs);
   };
 } // namespace flock_vlam
 
