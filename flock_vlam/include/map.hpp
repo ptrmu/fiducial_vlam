@@ -56,6 +56,8 @@ namespace flock_vlam
     geometry_msgs::msg::PoseWithCovariance to_msg();
 
     geometry_msgs::msg::PoseWithCovarianceStamped to_msg(std_msgs::msg::Header &header);
+
+    void update_simple_average(TransformWithCovariance &newVal, int previous_update_count);
   };
 
 //=============
@@ -127,19 +129,31 @@ namespace flock_vlam
     // The pose of the marker in the map frame
     TransformWithCovariance marker_pose_f_map_;
 
-    // Ids of other markers seen at the same time as this marker
-    bool isFixed {false};
+    // Prevent modificattion if true
+    bool is_fixed_{false};
+
+    // Count of updates
+    int update_count_;
 
   public:
     Marker() = default;
 
     Marker(int id, TransformWithCovariance marker_pose_f_map)
-      : id_(id), marker_pose_f_map_(marker_pose_f_map)
+      : id_(id), marker_pose_f_map_(marker_pose_f_map), update_count_(1)
     {}
 
     auto id() const
     { return id_; }
 
+    auto is_fixed() const
+    { return is_fixed_; }
+
+    void set_is_fixed(bool is_fixed)
+    { is_fixed_ = is_fixed; }
+
+    auto update_count() const
+    { return update_count_; }
+    
     auto marker_pose_f_map() const
     { return marker_pose_f_map_; }
 
@@ -150,6 +164,16 @@ namespace flock_vlam
     // These corners need to be in the same order as the corners returned
     // from cv::aruco::detectMarkers()
     std::vector<cv::Point3d> corners_f_map(float marker_length);
+
+    static std::vector<cv::Point3d> corners_f_marker(float marker_length);
+
+    void update_simple_average(TransformWithCovariance &newVal)
+    {
+      if (!is_fixed_) {
+        marker_pose_f_map_.update_simple_average(newVal, update_count_);
+        update_count_ += 1;
+      }
+    }
   };
 
 //=============
@@ -164,12 +188,12 @@ namespace flock_vlam
   public:
     explicit Map(rclcpp::Node &node);
 
-    auto markers()
+    auto &markers()
     { return markers_; }
 
     void load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg);
 
-    flock_vlam_msgs::msg::Map to_map_msg();
+    flock_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg);
   };
 
 //=============

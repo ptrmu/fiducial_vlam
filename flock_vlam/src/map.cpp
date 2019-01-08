@@ -36,6 +36,19 @@ namespace flock_vlam
     return msg;
   }
 
+  void TransformWithCovariance::update_simple_average(TransformWithCovariance &newVal, int previous_update_count)
+  {
+    double previous_weight = double(previous_update_count) / (previous_update_count + 1);
+    double current_weight = 1.0 / (previous_update_count + 1);
+
+    transform_.setOrigin(transform_.getOrigin() * previous_weight +
+                         newVal.transform_.getOrigin() * current_weight);
+
+    tf2::Quaternion q1 = transform_.getRotation();
+    tf2::Quaternion q2 = newVal.transform_.getRotation();
+    transform_.setRotation(q1.slerp(q2, current_weight).normalized());
+  }
+
 //=============
 // Observations class
 //=============
@@ -63,6 +76,7 @@ namespace flock_vlam
     msg.camera_info = camera_info_msg;
     for (auto observation : observations_) {
       flock_vlam_msgs::msg::Observation obs_msg;
+      obs_msg.id = observation.id();
       obs_msg.x0 = observation.corners_f_image()[0].x;
       obs_msg.x1 = observation.corners_f_image()[1].x;
       obs_msg.x2 = observation.corners_f_image()[2].x;
@@ -82,7 +96,6 @@ namespace flock_vlam
 
   std::vector<cv::Point3d> Marker::corners_f_map(float marker_length)
   {
-
     // Build up a list of the corner locations in the map frame.
     tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
     tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
@@ -104,6 +117,17 @@ namespace flock_vlam
     return corners_f_map;
   }
 
+  std::vector<cv::Point3d> Marker::corners_f_marker(float marker_length)
+  {
+    // Build up a list of the corner locations in the map frame.
+    std::vector<cv::Point3d> corners_f_marker;
+    corners_f_marker.push_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
+    corners_f_marker.push_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
+    corners_f_marker.push_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
+    corners_f_marker.push_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
+    return corners_f_marker;
+  }
+
 //=============
 // Map class
 //=============
@@ -114,15 +138,22 @@ namespace flock_vlam
 
     // Create one entry in the map for now while debugging.
     auto first_marker_id = 4;
-    tf2::Vector3 t{0, 0, 1};
+//    tf2::Vector3 t{0, 0, 1};
+//    tf2::Quaternion q;
+//    q.setX(0.5);
+//    q.setY(-0.5);
+//    q.setZ(-0.5);
+//    q.setW(0.5);
+    tf2::Vector3 t{0, 0, 0};
     tf2::Quaternion q;
-    q.setX(0.5);
-    q.setY(-0.5);
-    q.setZ(-0.5);
-    q.setW(0.5);
+    q.setX(0.0);
+    q.setY(0.0);
+    q.setZ(0.0);
+    q.setW(1.0);
     tf2::Transform first_marker_transform(q, t);
     auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
     Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
+    first_marker.set_is_fixed(true);
     markers_[first_marker_id] = first_marker;
   }
 
@@ -130,7 +161,7 @@ namespace flock_vlam
   {
   }
 
-  flock_vlam_msgs::msg::Map Map::to_map_msg()
+  flock_vlam_msgs::msg::Map Map::to_map_msg(const std_msgs::msg::Header &header_msg)
   {
     flock_vlam_msgs::msg::Map map_msg;
     return map_msg;
@@ -193,11 +224,11 @@ namespace flock_vlam
     return TransformWithCovariance(t_map_camera, 0.0);
   }
 
-  // Compute marker poses using Map info. Note this can only be done if
-  // a camera pose in the map frame is determined and we have a marker's pose in
-  // the map frame. The calculation is to take the marker location in the map
-  // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
-  // to get t_camera_marker.
+// Compute marker poses using Map info. Note this can only be done if
+// a camera pose in the map frame is determined and we have a marker's pose in
+// the map frame. The calculation is to take the marker location in the map
+// frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
+// to get t_camera_marker.
   void Localizer::markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
                                         std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
   {
@@ -229,7 +260,7 @@ namespace flock_vlam
     }
   }
 
-  // This method was used to debug transforms. It is not used but will be kept around for awhile.
+// This method was used to debug transforms. It is not used but will be kept around for awhile.
   void Localizer::markers_pose_f_camera_tf2(Observations &observations, float marker_length,
                                             const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs,
                                             std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
