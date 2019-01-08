@@ -13,11 +13,17 @@
 
 #include "map.hpp"
 
-namespace flock_vlam {
+namespace flock_vlam
+{
+
+//=============
+// VlocNode class
+//=============
 
   class VlocNode : public rclcpp::Node
   {
     Map map_;
+    Localizer localizer_;
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
@@ -35,12 +41,12 @@ namespace flock_vlam {
     cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     cv::Ptr<cv::aruco::DetectorParameters> detectorParameters_ = cv::aruco::DetectorParameters::create();
 
-    float marker_length_ {0.18415};
+    float marker_length_{0.18415};
 
   public:
 
     explicit VlocNode()
-    : Node("vloc_node"), map_(*this)
+      : Node("vloc_node"), map_(*this), localizer_(*this, map_)
     {
       // ROS subscriptions
       auto cameraInfo_cb = std::bind(&VlocNode::camera_info_callback, this, std::placeholders::_1);
@@ -70,7 +76,7 @@ namespace flock_vlam {
       if (!have_camera_info_) {
         // Save the info message because we pass it along with the observations.
         cameraInfo_ = *msg;
-        map_.load_camera_info(*msg, camera_matrix_, dist_coeffs_);
+        tf2_util::load_camera_info(*msg, camera_matrix_, dist_coeffs_);
 
         RCLCPP_INFO(get_logger(), "have camera info");
         have_camera_info_ = true;
@@ -114,8 +120,8 @@ namespace flock_vlam {
 
       // Calculate the pose of this camera in the map frame.
       Observations observations(ids, corners);
-      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_,
-                                                               dist_coeffs_);
+      auto camera_pose_f_map = localizer_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_,
+                                                                     dist_coeffs_);
 
       // Publish the camera pose in the map frame
       auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
@@ -144,7 +150,7 @@ namespace flock_vlam {
         // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
         // to get t_camera_marker.
         std::vector<cv::Vec3d> rvecs_map, tvecs_map;
-        map_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_map, tvecs_map);
+        localizer_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_map, tvecs_map);
 
         // Draw poses
 //        for (int i = 0; i < rvecs.size(); i++) {
@@ -159,8 +165,11 @@ namespace flock_vlam {
       }
     };
   };
-
 }
+
+//=============
+// main()
+//=============
 
 int main(int argc, char **argv)
 {

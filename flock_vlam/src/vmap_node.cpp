@@ -13,23 +13,85 @@
 
 #include "map.hpp"
 
-namespace flock_vlam {
+namespace flock_vlam
+{
+
+//=============
+// Mapper class
+//=============
+
+  class Mapper
+  {
+    rclcpp::Node &node_;
+    Map &map_;
+
+  public:
+    Mapper(rclcpp::Node &node, Map &map)
+      : node_(node), map_(map)
+    {
+    }
+
+    virtual ~Mapper()
+    {}
+
+    auto &node()
+    { return node_; }
+
+    auto &map()
+    { return map_; }
+
+    virtual bool
+    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
+               const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs, const std_msgs::msg::Header &header_msg) = 0;
+  };
+
+//=============
+// MapperSimpleAverage class
+//=============
+
+  class MapperSimpleAverage : public Mapper
+  {
+
+  public:
+    MapperSimpleAverage(rclcpp::Node &node, Map &map)
+      : Mapper(node, map)
+    {
+    }
+
+    virtual ~MapperSimpleAverage()
+    {}
+
+    virtual bool
+    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
+               const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs, const std_msgs::msg::Header &header_msg)
+    {
+      return false;
+    }
+  };
+
+//=============
+// VmapNode class
+//=============
 
   class VmapNode : public rclcpp::Node
   {
     Map map_;
+    Localizer localizer_;
+    std::shared_ptr<Mapper> mapper_;
 
-    float marker_length_ {0.18415};
+    float marker_length_{0.18415};
 
   public:
 
     explicit VmapNode()
-    : Node("vmap_node"), map_(*this)
+      : Node("vmap_node"), map_(*this), localizer_(*this, map_)
     {
+      mapper_.reset(new MapperSimpleAverage(*this, map_));
+
       // ROS subscriptions
       auto observations_sub_cb = std::bind(&VmapNode::observations_callback, this, std::placeholders::_1);
-      observations_sub_ = create_subscription<flock_vlam_msgs::msg::Observations>("/flock_observations", observations_sub_cb);
-
+      observations_sub_ = create_subscription<flock_vlam_msgs::msg::Observations>("/flock_observations",
+                                                                                  observations_sub_cb);
 
       // ROS publishers
       map_pub_ = create_publisher<flock_vlam_msgs::msg::Map>("/flock_map", 128);
@@ -44,18 +106,18 @@ namespace flock_vlam {
       // Get the cameraInfo from the message
       cv::Mat camera_matrix;
       cv::Mat dist_coeffs;
-      map_.load_camera_info(msg->camera_info, camera_matrix, dist_coeffs);
+      tf2_util::load_camera_info(msg->camera_info, camera_matrix, dist_coeffs);
 
       // Get observations from the message.
       Observations observations(*msg);
 
       // Estimate the camera pose using the latest map estimate
-      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix,
-                                                               dist_coeffs);
+      auto camera_pose_f_map = localizer_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix,
+                                                                     dist_coeffs);
 
       // Update our map with the observations
-      auto doPub = map_.update_map(camera_pose_f_map, observations, marker_length_,
-                                   camera_matrix, dist_coeffs, msg->header);
+      auto doPub = mapper_->update_map(camera_pose_f_map, observations, marker_length_,
+                                       camera_matrix, dist_coeffs, msg->header);
 
       // Publish the new map if requested
       if (doPub) {
@@ -67,8 +129,11 @@ namespace flock_vlam {
 
     rclcpp::Publisher<flock_vlam_msgs::msg::Map>::SharedPtr map_pub_;
   };
+}
 
-} // namespace detect_markers
+//=============
+// main()
+//=============
 
 int main(int argc, char **argv)
 {

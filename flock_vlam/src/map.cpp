@@ -13,8 +13,12 @@
 namespace flock_vlam
 {
 
+//=============
+// TransformWithCovariance class
+//=============
+
   geometry_msgs::msg::PoseWithCovarianceStamped TransformWithCovariance::to_msg(
-    std_msgs::msg::Header & header)
+    std_msgs::msg::Header &header)
   {
     geometry_msgs::msg::PoseWithCovarianceStamped msg;
     msg.set__header(header);
@@ -31,6 +35,10 @@ namespace flock_vlam
     //msg.set__covariance() // ToDo move over the covariance
     return msg;
   }
+
+//=============
+// Observations class
+//=============
 
   Observations::Observations(std::vector<int> ids, std::vector<std::vector<cv::Point2f>> corners)
   {
@@ -68,13 +76,18 @@ namespace flock_vlam
     return msg;
   }
 
-  std::vector<cv::Point3d> Marker::corners_f_map(float marker_length) {
+//=============
+// Marker class
+//=============
+
+  std::vector<cv::Point3d> Marker::corners_f_map(float marker_length)
+  {
 
     // Build up a list of the corner locations in the map frame.
     tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
-    tf2::Vector3 corner1_f_marker( marker_length / 2.f, marker_length / 2.f, 0.f);
-    tf2::Vector3 corner2_f_marker( marker_length / 2.f,-marker_length / 2.f, 0.f);
-    tf2::Vector3 corner3_f_marker(-marker_length / 2.f,-marker_length / 2.f, 0.f);
+    tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
+    tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
+    tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
 
     auto t_map_marker_tf = t_map_marker().transform();
     auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
@@ -91,18 +104,22 @@ namespace flock_vlam
     return corners_f_map;
   }
 
-  Map::Map(rclcpp::Node & node)
-  : node_(node), markers_()
+//=============
+// Map class
+//=============
+
+  Map::Map(rclcpp::Node &node)
+    : node_(node), markers_()
   {
 
     // Create one entry in the map for now while debugging.
     auto first_marker_id = 4;
-    tf2::Vector3 t { 0, 0, 1 };
+    tf2::Vector3 t{0, 0, 1};
     tf2::Quaternion q;
-    q.setX( 0.5);
+    q.setX(0.5);
     q.setY(-0.5);
     q.setZ(-0.5);
-    q.setW( 0.5);
+    q.setW(0.5);
     tf2::Transform first_marker_transform(q, t);
     auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
     Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
@@ -113,14 +130,31 @@ namespace flock_vlam
   {
   }
 
-  TransformWithCovariance Map::estimate_camera_pose_f_map(Observations &observations, float marker_length,
-                                                          const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs)
+  flock_vlam_msgs::msg::Map Map::to_map_msg()
+  {
+    flock_vlam_msgs::msg::Map map_msg;
+    return map_msg;
+  }
+
+//=============
+// Localizer class
+//=============
+
+  Localizer::Localizer(rclcpp::Node &node, Map &map)
+    : node_(node), map_(map)
+  {
+
+  }
+
+  TransformWithCovariance Localizer::estimate_camera_pose_f_map(Observations &observations, float marker_length,
+                                                                const cv::Mat &camera_matrix,
+                                                                const cv::Mat &dist_coeffs)
   {
     // Find the ids of markers that we can see and that we have a location for.
     std::set<int> good_markers;
     for (auto o : observations.observations()) {
-      auto marker = markers_.find(o.id());
-      if (marker != markers_.end()) {
+      auto marker = map_.markers().find(o.id());
+      if (marker != map_.markers().end()) {
         good_markers.insert(o.id());
       }
     }
@@ -133,10 +167,9 @@ namespace flock_vlam
     // Build up two lists of corner points: 2D in the image frame, 3D in the map frame
     std::vector<cv::Point3d> all_corners_f_map;
     std::vector<cv::Point2f> all_corners_f_image;
-    for (auto o : observations.observations())
-    {
+    for (auto o : observations.observations()) {
       if (good_markers.count(o.id()) > 0) {
-        auto corners_f_map = markers_.find(o.id())->second.corners_f_map(marker_length);
+        auto corners_f_map = map_.markers().find(o.id())->second.corners_f_map(marker_length);
         auto corners_f_image = o.corners_f_image();
 
         all_corners_f_map.insert(all_corners_f_map.end(),
@@ -165,8 +198,8 @@ namespace flock_vlam
   // the map frame. The calculation is to take the marker location in the map
   // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
   // to get t_camera_marker.
-  void Map::markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
-                             std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
+  void Localizer::markers_pose_f_camera(const TransformWithCovariance &camera_pose_f_map, const std::vector<int> &ids,
+                                        std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
   {
     // Can not do this calculation without a camera pose.
     if (!camera_pose_f_map.is_valid()) {
@@ -177,8 +210,8 @@ namespace flock_vlam
 
     // Loop through the ids of the markers visible in this image
     for (auto id : ids) {
-      auto marker = markers_.find(id);
-      if (marker != markers_.end()) {
+      auto marker = map_.markers().find(id);
+      if (marker != map_.markers().end()) {
 
         // Found a marker that is visible in the image and we have a pose_f_map.
         // Calculate marker_pose_f_camera or equivalently t_camera_marker
@@ -197,23 +230,23 @@ namespace flock_vlam
   }
 
   // This method was used to debug transforms. It is not used but will be kept around for awhile.
-  void Map::markers_pose_f_camera_tf2(Observations &observations, float marker_length,
-                                      const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs,
-                                      std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
+  void Localizer::markers_pose_f_camera_tf2(Observations &observations, float marker_length,
+                                            const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs,
+                                            std::vector<cv::Vec3d> &rvecs, std::vector<cv::Vec3d> &tvecs)
   {
     // Loop through the ids of the markers visible in this image
     for (auto observation : observations.observations()) {
-      auto marker = markers_.find(observation.id());
-      if (marker != markers_.end()) {
+      auto marker = map_.markers().find(observation.id());
+      if (marker != map_.markers().end()) {
 
         // Found a marker that is visible in the image and we have a pose_f_map or t_map_marker.
         auto t_map_marker_tf = marker->second.marker_pose_f_map().transform();
 
         // Build up a list of the corner locations in the map frame.
         tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
-        tf2::Vector3 corner1_f_marker( marker_length / 2.f, marker_length / 2.f, 0.f);
-        tf2::Vector3 corner2_f_marker( marker_length / 2.f,-marker_length / 2.f, 0.f);
-        tf2::Vector3 corner3_f_marker(-marker_length / 2.f,-marker_length / 2.f, 0.f);
+        tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
+        tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
+        tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
 
         auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
         auto corner1_f_map = t_map_marker_tf * corner1_f_marker;
@@ -259,34 +292,5 @@ namespace flock_vlam
     }
   }
 
-  bool Map::update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
-                       const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs, const std_msgs::msg::Header &header_msg)
-  {
-    return false;
-  }
-
-  flock_vlam_msgs::msg::Observations Map::to_map_msg()
-  {
-    flock_vlam_msgs::msg::Observations map_msg;
-    return map_msg;
-  }
-
-  void Map::load_camera_info(const sensor_msgs::msg::CameraInfo &msg, cv::Mat &camera_matrix, cv::Mat &dist_coeffs)
-  {
-    camera_matrix = cv::Mat(3, 3, CV_64F, 0.);
-    camera_matrix.at<double>(0, 0) = msg.k[0];
-    camera_matrix.at<double>(0, 2) = msg.k[2];
-    camera_matrix.at<double>(1, 1) = msg.k[4];
-    camera_matrix.at<double>(1, 2) = msg.k[5];
-    camera_matrix.at<double>(2, 2) = 1.;
-
-    // ROS and OpenCV (and everybody?) agree on this ordering: k1, k2, t1 (p1), t2 (p2), k3
-    dist_coeffs = cv::Mat(1, 5, CV_64F);
-    dist_coeffs.at<double>(0) = msg.d[0];
-    dist_coeffs.at<double>(1) = msg.d[1];
-    dist_coeffs.at<double>(2) = msg.d[2];
-    dist_coeffs.at<double>(3) = msg.d[3];
-    dist_coeffs.at<double>(4) = msg.d[4];
-  }
 }
 
