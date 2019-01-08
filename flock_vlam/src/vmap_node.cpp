@@ -10,7 +10,6 @@
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/aruco.hpp"
 
-#include "eigen_util.hpp"
 
 #include "map.hpp"
 
@@ -18,7 +17,6 @@ namespace flock_vlam {
 
   class VmapNode : public rclcpp::Node
   {
-  private:
     Map map_;
 
   public:
