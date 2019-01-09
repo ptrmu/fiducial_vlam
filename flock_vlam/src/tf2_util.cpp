@@ -38,5 +38,23 @@ namespace tf2_util
     }
     cv::Rodrigues(rmat, rvec);
   }
+
+  void load_camera_info(const sensor_msgs::msg::CameraInfo &msg, cv::Mat &camera_matrix, cv::Mat &dist_coeffs)
+  {
+    camera_matrix = cv::Mat(3, 3, CV_64F, 0.);
+    camera_matrix.at<double>(0, 0) = msg.k[0];
+    camera_matrix.at<double>(0, 2) = msg.k[2];
+    camera_matrix.at<double>(1, 1) = msg.k[4];
+    camera_matrix.at<double>(1, 2) = msg.k[5];
+    camera_matrix.at<double>(2, 2) = 1.;
+
+    // ROS and OpenCV (and everybody?) agree on this ordering: k1, k2, t1 (p1), t2 (p2), k3
+    dist_coeffs = cv::Mat(1, 5, CV_64F);
+    dist_coeffs.at<double>(0) = msg.d[0];
+    dist_coeffs.at<double>(1) = msg.d[1];
+    dist_coeffs.at<double>(2) = msg.d[2];
+    dist_coeffs.at<double>(3) = msg.d[3];
+    dist_coeffs.at<double>(4) = msg.d[4];
+  }
 }
 

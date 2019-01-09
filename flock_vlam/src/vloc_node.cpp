@@ -13,11 +13,17 @@
 
 #include "map.hpp"
 
-namespace flock_vlam {
+namespace flock_vlam
+{
+
+//=============
+// VlocNode class
+//=============
 
   class VlocNode : public rclcpp::Node
   {
     Map map_;
+    Localizer localizer_;
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
@@ -28,18 +34,17 @@ namespace flock_vlam {
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
 
     bool have_camera_info_{false};
+    sensor_msgs::msg::CameraInfo cameraInfo_;
     cv::Mat camera_matrix_;
     cv::Mat dist_coeffs_;
 
     cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     cv::Ptr<cv::aruco::DetectorParameters> detectorParameters_ = cv::aruco::DetectorParameters::create();
 
-    float marker_length_ {0.18415};
-
   public:
 
     explicit VlocNode()
-    : Node("vloc_node"), map_(*this)
+      : Node("vloc_node"), map_(*this), localizer_(*this, map_)
     {
       // ROS subscriptions
       auto cameraInfo_cb = std::bind(&VlocNode::camera_info_callback, this, std::placeholders::_1);
@@ -67,20 +72,9 @@ namespace flock_vlam {
     void camera_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg)
     {
       if (!have_camera_info_) {
-        camera_matrix_ = cv::Mat(3, 3, CV_64F, 0.);
-        camera_matrix_.at<double>(0, 0) = msg->k[0];
-        camera_matrix_.at<double>(0, 2) = msg->k[2];
-        camera_matrix_.at<double>(1, 1) = msg->k[4];
-        camera_matrix_.at<double>(1, 2) = msg->k[5];
-        camera_matrix_.at<double>(2, 2) = 1.;
-
-        // ROS and OpenCV (and everybody?) agree on this ordering: k1, k2, t1 (p1), t2 (p2), k3
-        dist_coeffs_ = cv::Mat(1, 5, CV_64F);
-        dist_coeffs_.at<double>(0) = msg->d[0];
-        dist_coeffs_.at<double>(1) = msg->d[1];
-        dist_coeffs_.at<double>(2) = msg->d[2];
-        dist_coeffs_.at<double>(3) = msg->d[3];
-        dist_coeffs_.at<double>(4) = msg->d[4];
+        // Save the info message because we pass it along with the observations.
+        cameraInfo_ = *msg;
+        tf2_util::load_camera_info(*msg, camera_matrix_, dist_coeffs_);
 
         RCLCPP_INFO(get_logger(), "have camera info");
         have_camera_info_ = true;
@@ -89,6 +83,10 @@ namespace flock_vlam {
 
     void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
     {
+      if (!have_camera_info_) {
+        return;
+      }
+
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(msg);
 
@@ -100,7 +98,7 @@ namespace flock_vlam {
       map_.load_from_msg(msg);
     }
 
-    void process_image(cv_bridge::CvImagePtr color, std_msgs::msg::Header & header_msg)
+    void process_image(cv_bridge::CvImagePtr color, std_msgs::msg::Header &header_msg)
     {
       // Color to gray for detection
       cv::Mat gray;
@@ -120,8 +118,7 @@ namespace flock_vlam {
 
       // Calculate the pose of this camera in the map frame.
       Observations observations(ids, corners);
-      auto camera_pose_f_map = map_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_,
-                                                               dist_coeffs_);
+      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix_, dist_coeffs_);
 
       // Publish the camera pose in the map frame
       auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
@@ -131,7 +128,7 @@ namespace flock_vlam {
 
       // Publish the observations only if multiple markers exist in the image
       if (ids.size() > 1) {
-        auto observations_msg = observations.to_msg(camera_pose_f_map_msg);
+        auto observations_msg = observations.to_msg(header_msg, cameraInfo_);
         observations_pub_->publish(observations_msg);
       }
 
@@ -150,7 +147,7 @@ namespace flock_vlam {
         // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
         // to get t_camera_marker.
         std::vector<cv::Vec3d> rvecs_map, tvecs_map;
-        map_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_map, tvecs_map);
+        localizer_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_map, tvecs_map);
 
         // Draw poses
 //        for (int i = 0; i < rvecs.size(); i++) {
@@ -165,8 +162,11 @@ namespace flock_vlam {
       }
     };
   };
-
 }
+
+//=============
+// main()
+//=============
 
 int main(int argc, char **argv)
 {

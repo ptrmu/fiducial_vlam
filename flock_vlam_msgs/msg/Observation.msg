@@ -1,5 +1,5 @@
-# An observation of a fiducial.
-int32 fiducial_id
+# An observation of a marker.
+int32 id
 
 # vertices
 float64 x0
