@@ -233,7 +233,8 @@ namespace flock_vlam
     return average_t_map_camera;
   }
 
-
+// This routine does not seem to work. The average version is being used. Maybe someday
+// this can be debugged.
   TransformWithCovariance Localizer::estimate_camera_pose_f_map(Observations &observations,
                                                                 const cv::Mat &camera_matrix,
                                                                 const cv::Mat &dist_coeffs)

@@ -183,13 +183,17 @@ namespace flock_vlam
       // Estimate the camera pose using the latest map estimate
       auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix, dist_coeffs);
 
-      // Update our map with the observations
-      auto doPub = mapper_->update_map(camera_pose_f_map, observations, camera_matrix, dist_coeffs);
+      // We get an invalid pose if none of the visible markers pose's are known.
+      if (camera_pose_f_map.is_valid()) {
 
-      // Publish the new map if requested
-      if (doPub) {
-        auto map_msg = map_.to_map_msg(msg->header, map_.marker_length());
-        map_pub_->publish(map_msg);
+        // Update our map with the observations
+        auto doPub = mapper_->update_map(camera_pose_f_map, observations, camera_matrix, dist_coeffs);
+
+        // Publish the new map if requested
+        if (doPub) {
+          auto map_msg = map_.to_map_msg(msg->header, map_.marker_length());
+          map_pub_->publish(map_msg);
+        }
       }
     }
 
