@@ -131,7 +131,7 @@ namespace flock_vlam
     // The pose of the marker in the map frame
     TransformWithCovariance marker_pose_f_map_;
 
-    // Prevent modificattion if true
+    // Prevent modification if true
     bool is_fixed_{false};
 
     // Count of updates
