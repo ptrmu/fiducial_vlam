@@ -70,27 +70,19 @@ namespace flock_vlam
     {
       bool marker_added{false};
 
-//      RCLCPP_INFO(node().get_logger(), "Processing %d observations", observations.observations().size());
-//      log_tf_transform(node(), "camera_pose_f_map", camera_pose_f_map.transform());
-
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
         auto t_map_marker = estimate_marker_pose_f_map(observation, camera_pose_f_map,
                                                        camera_matrix, dist_coeffs);
 
-//        RCLCPP_INFO(node().get_logger(), "update marker %d", observation.id());
-//        log_tf_transform(node(), "new t_map_marker", t_map_marker.transform());
-
-
         // Update an existing marker or add a new one.
         auto marker_pair = map().markers().find(observation.id());
         if (marker_pair != map().markers().end()) {
           auto &marker = marker_pair->second;
-//          log_tf_transform(node(), "old t_map_marker", marker.marker_pose_f_map().transform());
           marker.update_simple_average(t_map_marker);
+
         } else {
-//          RCLCPP_INFO(node().get_logger(), "old doesn't exist");
           map().markers()[observation.id()] = Marker(observation.id(), t_map_marker);
           marker_added = true;
         }
