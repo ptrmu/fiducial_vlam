@@ -34,14 +34,14 @@ namespace flock_vlam
     virtual ~Mapper()
     {}
 
-    auto &node()
+    auto &node() const
     { return node_; }
 
     auto &map()
     { return map_; }
 
     virtual bool
-    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
+    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
                const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs) = 0;
   };
 
@@ -51,7 +51,9 @@ namespace flock_vlam
 
   class MapperSimpleAverage : public Mapper
   {
-    int observations_processed_{0};
+    int observations_before_publish_base{10};
+    int observations_before_publish_reset{observations_before_publish_base};
+    int observations_before_publish{observations_before_publish_base};
 
   public:
     MapperSimpleAverage(rclcpp::Node &node, Map &map)
@@ -63,56 +65,56 @@ namespace flock_vlam
     {}
 
     virtual bool
-    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations, float marker_length,
+    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
                const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs)
     {
-      RCLCPP_INFO(node().get_logger(), "Processing %d observations", observations.observations().size());
+      bool marker_added{false};
+
+//      RCLCPP_INFO(node().get_logger(), "Processing %d observations", observations.observations().size());
+//      log_tf_transform(node(), "camera_pose_f_map", camera_pose_f_map.transform());
 
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
         auto t_map_marker = estimate_marker_pose_f_map(observation, camera_pose_f_map,
-                                                       marker_length, camera_matrix, dist_coeffs);
+                                                       camera_matrix, dist_coeffs);
 
-        RCLCPP_INFO(node().get_logger(), "update marker %d", observation.id());
-
-        RCLCPP_INFO(node().get_logger(), "camera xyz:%lf %lf %lf",
-                    camera_pose_f_map.transform().getOrigin().x(),
-                    camera_pose_f_map.transform().getOrigin().y(),
-                    camera_pose_f_map.transform().getOrigin().z());
-        RCLCPP_INFO(node().get_logger(), "new xyz:%lf %lf %lf",
-                    t_map_marker.transform().getOrigin().x(),
-                    t_map_marker.transform().getOrigin().y(),
-                    t_map_marker.transform().getOrigin().z());
+//        RCLCPP_INFO(node().get_logger(), "update marker %d", observation.id());
+//        log_tf_transform(node(), "new t_map_marker", t_map_marker.transform());
 
 
         // Update an existing marker or add a new one.
         auto marker_pair = map().markers().find(observation.id());
         if (marker_pair != map().markers().end()) {
           auto &marker = marker_pair->second;
-          RCLCPP_INFO(node().get_logger(), "old %d xyz:%lf %lf %lf",
-                      marker.update_count(),
-                      marker.marker_pose_f_map().transform().getOrigin().x(),
-                      marker.marker_pose_f_map().transform().getOrigin().y(),
-                      marker.marker_pose_f_map().transform().getOrigin().z());
+//          log_tf_transform(node(), "old t_map_marker", marker.marker_pose_f_map().transform());
           marker.update_simple_average(t_map_marker);
         } else {
-          RCLCPP_INFO(node().get_logger(), "old doesn't exist");
+//          RCLCPP_INFO(node().get_logger(), "old doesn't exist");
           map().markers()[observation.id()] = Marker(observation.id(), t_map_marker);
+          marker_added = true;
         }
       }
 
-      // for now publish a new map for every 10 images processed.
-      return ((++observations_processed_) % 10) == 0;
+      // For now publish a new map based on the number of images processed after a new marker is added.
+      if (marker_added) {
+        observations_before_publish = observations_before_publish_base;
+        observations_before_publish_reset = observations_before_publish_base;
+      } else if (observations_before_publish <= 0) {
+        observations_before_publish_reset += observations_before_publish_reset;
+        observations_before_publish = observations_before_publish_reset;
+      }
+      observations_before_publish -= 1;
+      return observations_before_publish == 0;
     }
 
     TransformWithCovariance estimate_marker_pose_f_map(Observation &observation,
                                                        const TransformWithCovariance &camera_pose_f_map,
-                                                       float marker_length, const cv::Mat &camera_matrix,
+                                                       const cv::Mat &camera_matrix,
                                                        const cv::Mat &dist_coeffs)
     {
       // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
-      std::vector<cv::Point3d> all_corners_f_map = Marker::corners_f_marker(marker_length);
+      std::vector<cv::Point3d> all_corners_f_map = Marker::corners_f_marker(map().marker_length());
       std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
 
       // Figure out image location.
@@ -144,7 +146,7 @@ namespace flock_vlam
     Localizer localizer_;
     std::shared_ptr<Mapper> mapper_;
 
-    float marker_length_{0.18415};
+    int callbacks_processed_{0};
 
   public:
 
@@ -168,6 +170,7 @@ namespace flock_vlam
 
     void observations_callback(const flock_vlam_msgs::msg::Observations::SharedPtr msg)
     {
+      callbacks_processed_ += 1;
 
       // Get the cameraInfo from the message
       cv::Mat camera_matrix;
@@ -178,16 +181,15 @@ namespace flock_vlam
       Observations observations(*msg);
 
       // Estimate the camera pose using the latest map estimate
-      auto camera_pose_f_map = localizer_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix,
-                                                                     dist_coeffs);
+      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix, dist_coeffs);
 
       // Update our map with the observations
-      auto doPub = mapper_->update_map(camera_pose_f_map, observations, marker_length_,
-                                       camera_matrix, dist_coeffs);
+      auto doPub = mapper_->update_map(camera_pose_f_map, observations, camera_matrix, dist_coeffs);
 
       // Publish the new map if requested
       if (doPub) {
-        // auto map_msg = map_.to_map_msg(msg->header);
+        auto map_msg = map_.to_map_msg(msg->header, map_.marker_length());
+        map_pub_->publish(map_msg);
       }
     }
 

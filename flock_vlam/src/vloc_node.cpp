@@ -41,8 +41,6 @@ namespace flock_vlam
     cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
     cv::Ptr<cv::aruco::DetectorParameters> detectorParameters_ = cv::aruco::DetectorParameters::create();
 
-    float marker_length_{0.18415};
-
   public:
 
     explicit VlocNode()
@@ -120,8 +118,7 @@ namespace flock_vlam
 
       // Calculate the pose of this camera in the map frame.
       Observations observations(ids, corners);
-      auto camera_pose_f_map = localizer_.estimate_camera_pose_f_map(observations, marker_length_, camera_matrix_,
-                                                                     dist_coeffs_);
+      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix_, dist_coeffs_);
 
       // Publish the camera pose in the map frame
       auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
