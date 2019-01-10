@@ -143,7 +143,7 @@ namespace flock_vlam
   {
 
     // Create one entry in the map for now while debugging.
-    auto first_marker_id = 4;
+    auto first_marker_id = 1;
     tf2::Vector3 t{0, 0, 1};
     tf2::Quaternion q;
     q.setX(0.5);
@@ -156,7 +156,7 @@ namespace flock_vlam
     first_marker.set_is_fixed(true);
     markers_[first_marker_id] = first_marker;
 
-    marker_length_ = 0.18415;
+    marker_length_ = 0.162718;
   }
 
   void Map::load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg)

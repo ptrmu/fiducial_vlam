@@ -31,6 +31,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(yaml_cpp_vendor REQUIRED)
 
 # Local includes
 include_directories(
@@ -77,6 +78,7 @@ ament_target_dependencies(vmap_node
   rclcpp
   sensor_msgs
   std_msgs
+  yaml_cpp_vendor
   )
 
 #=============
