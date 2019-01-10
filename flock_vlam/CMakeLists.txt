@@ -40,7 +40,19 @@ include_directories(
   ${geometry_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
+  ${visualization_msgs_INCLUDE_DIRS}
+  ${yaml_cpp_vendor_INCLUDE_DIRS}
 )
+
+# Debugging: set _dump_all_variables to true
+set(_dump_all_variables false)
+if(_dump_all_variables)
+  get_cmake_property(_variable_names VARIABLES)
+  list(SORT _variable_names)
+  foreach(_variable_name ${_variable_names})
+    message(STATUS "${_variable_name}=${${_variable_name}}")
+  endforeach()
+endif()
 
 #=============
 # vloc node
@@ -59,6 +71,8 @@ ament_target_dependencies(vloc_node
   rclcpp
   sensor_msgs
   std_msgs
+  visualization_msgs
+  yaml_cpp_vendor
   )
 
 #=============
@@ -78,6 +92,7 @@ ament_target_dependencies(vmap_node
   rclcpp
   sensor_msgs
   std_msgs
+  visualization_msgs
   yaml_cpp_vendor
   )
 

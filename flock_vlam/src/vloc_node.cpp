@@ -3,6 +3,7 @@
 
 #include "flock_vlam_msgs/msg/map.hpp"
 #include "flock_vlam_msgs/msg/observations.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
@@ -29,7 +30,7 @@ namespace flock_vlam
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
     rclcpp::Subscription<flock_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr camera_pose_pub_;
     rclcpp::Publisher<flock_vlam_msgs::msg::Observations>::SharedPtr observations_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
 
@@ -58,7 +59,7 @@ namespace flock_vlam
 
 
       // ROS publishers
-      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 1);
+      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("camera_pose", 1);
       observations_pub_ = create_publisher<flock_vlam_msgs::msg::Observations>("/flock_observations", 1);
       image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
 
@@ -120,10 +121,16 @@ namespace flock_vlam
       Observations observations(ids, corners);
       auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix_, dist_coeffs_);
 
-      // Publish the camera pose in the map frame
-      auto camera_pose_f_map_msg = camera_pose_f_map.to_msg(header_msg);
       if (camera_pose_f_map.is_valid()) {
-        camera_pose_pub_->publish(camera_pose_f_map_msg);
+        // Publish the camera pose in the map frame
+        auto camera_pose_f_map_msg = camera_pose_f_map.to_pose_with_covariance_stamped_msg(header_msg);
+
+        // for now just publish a pose message not a pose
+        geometry_msgs::msg::PoseStamped cam_pose_f_map;
+        cam_pose_f_map.pose = camera_pose_f_map_msg.pose.pose;
+        cam_pose_f_map.header = header_msg;
+        cam_pose_f_map.header.frame_id = "/map";
+        camera_pose_pub_->publish(cam_pose_f_map);
       }
 
       // Publish the observations only if multiple markers exist in the image

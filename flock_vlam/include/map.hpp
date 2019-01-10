@@ -8,6 +8,7 @@
 #include "flock_vlam_msgs/msg/map.hpp"
 #include "flock_vlam_msgs/msg/observation.hpp"
 #include "flock_vlam_msgs/msg/observations.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "std_msgs/msg/header.hpp"
 
@@ -55,9 +56,13 @@ namespace flock_vlam
     auto variance() const
     { return variance_; }
 
-    geometry_msgs::msg::PoseWithCovariance to_msg();
+    geometry_msgs::msg::Pose to_pose_msg();
 
-    geometry_msgs::msg::PoseWithCovarianceStamped to_msg(std_msgs::msg::Header &header);
+    geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance_msg();
+
+    geometry_msgs::msg::PoseStamped to_pose_stamped_msg(std_msgs::msg::Header &header);
+
+    geometry_msgs::msg::PoseWithCovarianceStamped to_pose_with_covariance_stamped_msg(std_msgs::msg::Header &header);
 
     void update_simple_average(TransformWithCovariance &newVal, int previous_update_count);
   };
@@ -156,6 +161,9 @@ namespace flock_vlam
     auto update_count() const
     { return update_count_; }
 
+    void set_update_count(int update_count)
+    { update_count_ = update_count; }
+
     auto marker_pose_f_map() const
     { return marker_pose_f_map_; }
 
@@ -200,6 +208,14 @@ namespace flock_vlam
     void load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg);
 
     flock_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length);
+
+    void to_YAML_string(std::string &yaml);
+
+    void from_YAML_string(std::string &yaml);
+
+    void load_from_file(std::string full_path);
+
+    void save_to_file(std::string full_path);
   };
 
 //=============
