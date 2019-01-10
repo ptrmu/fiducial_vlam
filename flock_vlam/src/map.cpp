@@ -160,12 +160,18 @@ namespace flock_vlam
 
     // Create one entry in the map for now while debugging.
     auto first_marker_id = 1;
-    tf2::Vector3 t{0, 0, 1};
+//    tf2::Vector3 t{0, 0, 1};
+//    tf2::Quaternion q;
+//    q.setX(0.5);
+//    q.setY(-0.5);
+//    q.setZ(-0.5);
+//    q.setW(0.5);
+    tf2::Vector3 t{0, 0, 0};
     tf2::Quaternion q;
-    q.setX(0.5);
-    q.setY(-0.5);
-    q.setZ(-0.5);
-    q.setW(0.5);
+    q.setX(0);
+    q.setY(0);
+    q.setZ(0);
+    q.setW(1);
     tf2::Transform first_marker_transform(q, t);
     auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
     Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
@@ -318,6 +324,9 @@ namespace flock_vlam
         }
       }
     }
+
+    RCLCPP_INFO(node_.get_logger(), "Camera pose. Averaged from %d observations", observations_count);
+    log_tf_transform(node_, "", average_t_map_camera.transform());
 
     return average_t_map_camera;
   }

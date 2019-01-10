@@ -224,7 +224,7 @@ namespace flock_vlam
 
   class Localizer
   {
-    const rclcpp::Node &node_;
+    rclcpp::Node &node_;
     Map &map_;
 
   public:
