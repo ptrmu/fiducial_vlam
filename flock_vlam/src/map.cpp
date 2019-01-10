@@ -159,8 +159,7 @@ namespace flock_vlam
   {
 
     // Create one entry in the map for now while debugging.
-    //auto first_marker_id = 1;
-    auto first_marker_id = 4;
+    auto first_marker_id = 1;
     tf2::Vector3 t{0, 0, 1};
     tf2::Quaternion q;
     q.setX(0.5);

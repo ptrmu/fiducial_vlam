@@ -110,7 +110,7 @@ namespace flock_vlam
       std::vector<std::vector<cv::Point2f>> corners;
       cv::aruco::detectMarkers(gray, dictionary_, corners, ids, detectorParameters_);
 
-      RCLCPP_INFO(get_logger(), "process_image: Found %d markers", ids.size());
+      RCLCPP_DEBUG(get_logger(), "process_image: Found %d markers", ids.size());
 
       // Stop if no markers were detected
       if (ids.size() == 0) {
@@ -129,7 +129,7 @@ namespace flock_vlam
         geometry_msgs::msg::PoseStamped cam_pose_f_map;
         cam_pose_f_map.pose = camera_pose_f_map_msg.pose.pose;
         cam_pose_f_map.header = header_msg;
-        cam_pose_f_map.header.frame_id = "/map";
+        cam_pose_f_map.header.frame_id = "map";
         camera_pose_pub_->publish(cam_pose_f_map);
       }
 

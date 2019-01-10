@@ -1,4 +1,5 @@
 
+#include <chrono>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -147,6 +148,8 @@ namespace flock_vlam
     rclcpp::Publisher<flock_vlam_msgs::msg::Map>::SharedPtr map_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rviz_markers_pub_;
 
+    rclcpp::TimerBase::SharedPtr map_pub_timer_;
+
   public:
 
     explicit VmapNode()
@@ -161,7 +164,11 @@ namespace flock_vlam
 
       // ROS publishers
       map_pub_ = create_publisher<flock_vlam_msgs::msg::Map>("/flock_map", 8);
-      rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("rviz_markers", 1);
+      rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/rviz_markers", 1);
+
+      // timer for publishing map info
+      auto map_pub_timer_cb = std::bind(&VmapNode::map_pub_timer_callback, this);
+      map_pub_timer_ = create_wall_timer(std::chrono::seconds(2), map_pub_timer_cb);
 
       RCLCPP_INFO(get_logger(), "vmap_node ready");
     }
@@ -191,19 +198,25 @@ namespace flock_vlam
 
         // Publish the new map if requested
         if (doPub) {
-          auto map_msg = map_.to_map_msg(msg->header, map_.marker_length());
-          map_pub_->publish(map_msg);
-
-          // Publish the marker Visualization
-          publish_map_visualization();
+          publish_map_and_visualization();
 
           // Save the map to a file as well
-          map_.save_to_file("src/flock_vlam/flock_vlam/cfg/generated_map.yaml");
+          //map_.save_to_file("src/flock_vlam/flock_vlam/cfg/generated_map.yaml");
         }
       }
     }
 
-    void publish_map_visualization(void) {
+    void publish_map_and_visualization()
+    {
+      // publish the map
+      std_msgs::msg::Header header;
+      header.stamp = now();
+      header.frame_id = "map";
+
+      auto map_msg = map_.to_map_msg(header, map_.marker_length());
+      map_pub_->publish(map_msg);
+
+      // Publish the marker Visualization
       if (count_subscribers(rviz_markers_pub_->get_topic_name()) > 0) {
         visualization_msgs::msg::MarkerArray marker_array_msg;
         for (auto marker_pair: map_.markers()) {
@@ -226,6 +239,12 @@ namespace flock_vlam
         rviz_markers_pub_->publish(marker_array_msg);
       }
     }
+
+    void map_pub_timer_callback(void)
+    {
+      publish_map_and_visualization();
+    }
+
   };
 }
 
