@@ -161,7 +161,7 @@ namespace flock_vlam
 
       // ROS publishers
       map_pub_ = create_publisher<flock_vlam_msgs::msg::Map>("/flock_map", 8);
-      //rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("rviz_markers", 1);
+      rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("rviz_markers", 1);
 
       RCLCPP_INFO(get_logger(), "vmap_node ready");
     }
@@ -205,25 +205,25 @@ namespace flock_vlam
 
     void publish_map_visualization(void) {
       if (count_subscribers(rviz_markers_pub_->get_topic_name()) > 0) {
-//        visualization_msgs::msg::MarkerArray marker_array_msg;
-//        for (auto marker_pair: map_.markers()) {
-//          auto marker = marker_pair.second;
-//          visualization_msgs::msg::Marker marker_msg;
-//          marker_msg.id = marker.id();
-//          marker_msg.header.frame_id = "map";
-//          marker_msg.pose = marker.t_map_marker().to_pose_msg();
-//          marker_msg.type = marker_msg.CUBE;
-//          marker_msg.action = marker_msg.ADD;
-//          marker_msg.scale.x = 0.1;
-//          marker_msg.scale.y = 0.1;
-//          marker_msg.scale.z = 0.01;
-//          marker_msg.color.r = 1.f;
-//          marker_msg.color.g = 1.f;
-//          marker_msg.color.b = 0.f;
-//          marker_msg.color.a = 1.f;
-//          marker_array_msg.markers.push_back(marker_msg);
-//        }
-//        rviz_markers_pub_->publish(marker_array_msg);
+        visualization_msgs::msg::MarkerArray marker_array_msg;
+        for (auto marker_pair: map_.markers()) {
+          auto marker = marker_pair.second;
+          visualization_msgs::msg::Marker marker_msg;
+          marker_msg.id = marker.id();
+          marker_msg.header.frame_id = "map";
+          marker_msg.pose = marker.t_map_marker().to_pose_msg();
+          marker_msg.type = marker_msg.CUBE;
+          marker_msg.action = marker_msg.ADD;
+          marker_msg.scale.x = 0.1;
+          marker_msg.scale.y = 0.1;
+          marker_msg.scale.z = 0.01;
+          marker_msg.color.r = 1.f;
+          marker_msg.color.g = 1.f;
+          marker_msg.color.b = 0.f;
+          marker_msg.color.a = 1.f;
+          marker_array_msg.markers.push_back(marker_msg);
+        }
+        rviz_markers_pub_->publish(marker_array_msg);
       }
     }
   };
