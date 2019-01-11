@@ -30,7 +30,7 @@ namespace flock_vlam
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
     rclcpp::Subscription<flock_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr camera_pose_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_;
     rclcpp::Publisher<flock_vlam_msgs::msg::Observations>::SharedPtr observations_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
 
@@ -59,7 +59,7 @@ namespace flock_vlam
 
 
       // ROS publishers
-      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>("camera_pose", 1);
+      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 1);
       observations_pub_ = create_publisher<flock_vlam_msgs::msg::Observations>("/flock_observations", 1);
       image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
 
@@ -126,10 +126,16 @@ namespace flock_vlam
         auto camera_pose_f_map_msg = camera_pose_f_map.to_pose_with_covariance_stamped_msg(header_msg);
 
         // for now just publish a pose message not a pose
-        geometry_msgs::msg::PoseStamped cam_pose_f_map;
-        cam_pose_f_map.pose = camera_pose_f_map_msg.pose.pose;
+        geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
+        cam_pose_f_map.pose.pose = camera_pose_f_map_msg.pose.pose;
         cam_pose_f_map.header = header_msg;
         cam_pose_f_map.header.frame_id = "map";
+        cam_pose_f_map.pose.covariance[0] = 6e-3;
+        cam_pose_f_map.pose.covariance[7] = 6e-3;
+        cam_pose_f_map.pose.covariance[14] = 6e-3;
+        cam_pose_f_map.pose.covariance[21] = 2e-3;
+        cam_pose_f_map.pose.covariance[28] = 2e-3;
+        cam_pose_f_map.pose.covariance[35] = 2e-3;
         camera_pose_pub_->publish(cam_pose_f_map);
       }
 
