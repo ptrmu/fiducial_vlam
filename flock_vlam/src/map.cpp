@@ -10,6 +10,9 @@
 
 #include "tf2_util.hpp"
 
+#include "yaml-cpp/yaml.h"
+
+
 namespace flock_vlam
 {
 
@@ -23,22 +26,35 @@ namespace flock_vlam
     fromMsg(pose.pose, transform_);
   }
 
-  geometry_msgs::msg::PoseWithCovarianceStamped TransformWithCovariance::to_msg(
-    std_msgs::msg::Header &header)
-  {
-    geometry_msgs::msg::PoseWithCovarianceStamped msg;
-    msg.set__header(header);
-    msg.set__pose(to_msg());
-    return msg;
-  }
-
-  geometry_msgs::msg::PoseWithCovariance TransformWithCovariance::to_msg()
+  geometry_msgs::msg::Pose TransformWithCovariance::to_pose_msg()
   {
     geometry_msgs::msg::Pose pose;
     toMsg(transform_, pose);
+    return pose;
+  }
+
+  geometry_msgs::msg::PoseWithCovariance TransformWithCovariance::to_pose_with_covariance_msg()
+  {
     geometry_msgs::msg::PoseWithCovariance msg;
-    msg.set__pose(pose);
+    msg.pose = to_pose_msg();
     //msg.set__covariance() // ToDo move over the covariance
+    return msg;
+  }
+
+  geometry_msgs::msg::PoseStamped TransformWithCovariance::to_pose_stamped_msg(std_msgs::msg::Header &header)
+  {
+    geometry_msgs::msg::PoseStamped msg;
+    msg.header = header;
+    msg.pose = to_pose_msg();
+    return msg;
+  }
+
+  geometry_msgs::msg::PoseWithCovarianceStamped TransformWithCovariance::to_pose_with_covariance_stamped_msg(
+    std_msgs::msg::Header &header)
+  {
+    geometry_msgs::msg::PoseWithCovarianceStamped msg;
+    msg.header = header;
+    msg.pose = to_pose_with_covariance_msg();
     return msg;
   }
 
@@ -144,12 +160,18 @@ namespace flock_vlam
 
     // Create one entry in the map for now while debugging.
     auto first_marker_id = 1;
-    tf2::Vector3 t{0, 0, 1};
-    tf2::Quaternion q;
-    q.setX(0.5);
-    q.setY(-0.5);
-    q.setZ(-0.5);
-    q.setW(0.5);
+   tf2::Vector3 t{0, 0, 1};
+   tf2::Quaternion q;
+   q.setX(0.5);
+   q.setY(-0.5);
+   q.setZ(-0.5);
+   q.setW(0.5);
+//     tf2::Vector3 t{0, 0, 0};
+//     tf2::Quaternion q;
+//     q.setX(0);
+//     q.setY(0);
+//     q.setZ(0);
+//     q.setW(1);
     tf2::Transform first_marker_transform(q, t);
     auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
     Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
@@ -157,6 +179,12 @@ namespace flock_vlam
     markers_[first_marker_id] = first_marker;
 
     marker_length_ = 0.162718;
+
+//    std::string yaml;
+//    to_YAML_string(yaml);
+//    RCLCPP_INFO(node_.get_logger(), "yaml %s", yaml.c_str());
+//
+//    from_YAML_string(yaml);
   }
 
   void Map::load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg)
@@ -176,12 +204,79 @@ namespace flock_vlam
     for (auto marker_pair : markers_) {
       auto &marker = marker_pair.second;
       map_msg.ids.push_back(marker.id());
-      map_msg.poses.push_back(marker.marker_pose_f_map().to_msg());
+      map_msg.poses.push_back(marker.marker_pose_f_map().to_pose_with_covariance_msg());
       map_msg.fixed_flags.push_back(marker.is_fixed() ? 1 : 0);
     }
     map_msg.header = header_msg;
     map_msg.marker_length = marker_length;
     return map_msg;
+  }
+
+  void Map::load_from_file(std::string full_path)
+  {
+    YAML::Node config = YAML::LoadFile("config.yaml");
+// catch YAML::BadFile
+  }
+
+  void Map::to_YAML_string(std::string &yaml)
+  {
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+    out << YAML::Key << "marker_length" << YAML::Value << marker_length_;
+    out << YAML::Key << "markers" << YAML::Value << YAML::BeginSeq;
+    for (auto marker_pair : markers_) {
+      auto &marker = marker_pair.second;
+      out << YAML::BeginMap;
+      out << YAML::Key << "id" << YAML::Value << marker.id();
+      out << YAML::Key << "u" << YAML::Value << marker.update_count();
+      out << YAML::Key << "f" << YAML::Value << (marker.is_fixed() ? 1 : 0);
+      auto &t = marker.marker_pose_f_map().transform().getOrigin();
+      out << YAML::Key << "t" << YAML::Value << YAML::Flow << YAML::BeginSeq << t.x() << t.y() << t.z() << YAML::EndSeq;
+      tf2::Quaternion q;
+      marker.marker_pose_f_map().transform().getBasis().getRotation(q);
+      out << YAML::Key << "q" << YAML::Value << YAML::Flow << YAML::BeginSeq << q.x() << q.y() << q.z() << q.w()
+          << YAML::EndSeq;
+      out << YAML::EndMap;
+    }
+    out << YAML::EndSeq;
+    out << YAML::EndMap;
+    yaml.append(out.c_str());
+  }
+
+  void Map::from_YAML_string(std::string &yaml)
+  {
+    YAML::Node node = YAML::Load(yaml);
+    if (node.IsMap()) {
+      marker_length_ = node["marker_length"].as<double>();
+      YAML::Node markers_node = node["markers"].as<YAML::Node>();
+      if (markers_node.IsSequence()) {
+        markers_.clear(); // clear out the member map of markers.
+        for (YAML::const_iterator it = markers_node.begin(); it != markers_node.end(); ++it) {
+          YAML::Node marker_node = *it;
+          if (marker_node.IsMap()) {
+            auto id = marker_node["id"].as<int>();
+            auto update_count = marker_node["u"].as<int>();
+            auto is_fixed = marker_node["f"].as<int>();
+            auto t_node = marker_node["t"].as<YAML::Node>();
+            tf2::tf2Vector4 t(t_node[0].as<double>(), t_node[1].as<double>(), t_node[2].as<double>(), 0.0);
+            tf2::Quaternion q;
+            auto q_node = marker_node["q"].as<YAML::Node>();
+            q.setX(q_node[0].as<double>());
+            q.setY(q_node[1].as<double>());
+            q.setZ(q_node[2].as<double>());
+            q.setW(q_node[3].as<double>());
+            Marker marker(id, TransformWithCovariance(tf2::Transform(q, t), 0.0));
+            marker.set_is_fixed(is_fixed);
+            marker.set_update_count(update_count);
+            markers_[id] = marker;
+          }
+        }
+      }
+    }
+  }
+
+  void Map::save_to_file(std::string full_path)
+  {
   }
 
 //=============
@@ -229,6 +324,9 @@ namespace flock_vlam
         }
       }
     }
+
+    RCLCPP_DEBUG(node_.get_logger(), "Camera pose. Averaged from %d observations", observations_count);
+    log_tf_transform(node_, "", average_t_map_camera.transform());
 
     return average_t_map_camera;
   }
@@ -391,7 +489,7 @@ namespace flock_vlam
     double r, p, y;
     transform.getBasis().getRPY(r, p, y);
 
-    RCLCPP_INFO(node.get_logger(), "%s xyz:%lf %lf %lf, rpy:%lf %lf %lf",
+    RCLCPP_DEBUG(node.get_logger(), "%s xyz:%lf %lf %lf, rpy:%lf %lf %lf",
                 s.c_str(), t.x(), t.y(), t.z(), r, p, y);
   }
 

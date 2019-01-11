@@ -1,4 +1,5 @@
 
+#include <chrono>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -6,6 +7,8 @@
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "tf2_msgs/msg/tf_message.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/aruco.hpp"
@@ -140,6 +143,13 @@ namespace flock_vlam
 
     int callbacks_processed_{0};
 
+    rclcpp::Subscription<flock_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
+
+    rclcpp::Publisher<flock_vlam_msgs::msg::Map>::SharedPtr map_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rviz_markers_pub_;
+
+    rclcpp::TimerBase::SharedPtr map_pub_timer_;
+
   public:
 
     explicit VmapNode()
@@ -154,6 +164,11 @@ namespace flock_vlam
 
       // ROS publishers
       map_pub_ = create_publisher<flock_vlam_msgs::msg::Map>("/flock_map", 8);
+      rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/rviz_markers", 1);
+
+      // timer for publishing map info
+      auto map_pub_timer_cb = std::bind(&VmapNode::map_pub_timer_callback, this);
+      map_pub_timer_ = create_wall_timer(std::chrono::seconds(2), map_pub_timer_cb);
 
       RCLCPP_INFO(get_logger(), "vmap_node ready");
     }
@@ -183,15 +198,53 @@ namespace flock_vlam
 
         // Publish the new map if requested
         if (doPub) {
-          auto map_msg = map_.to_map_msg(msg->header, map_.marker_length());
-          map_pub_->publish(map_msg);
+          publish_map_and_visualization();
+
+          // Save the map to a file as well
+          //map_.save_to_file("src/flock_vlam/flock_vlam/cfg/generated_map.yaml");
         }
       }
     }
 
-    rclcpp::Subscription<flock_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
+    void publish_map_and_visualization()
+    {
+      // publish the map
+      std_msgs::msg::Header header;
+      header.stamp = now();
+      header.frame_id = "map";
 
-    rclcpp::Publisher<flock_vlam_msgs::msg::Map>::SharedPtr map_pub_;
+      auto map_msg = map_.to_map_msg(header, map_.marker_length());
+      map_pub_->publish(map_msg);
+
+      // Publish the marker Visualization
+      if (count_subscribers(rviz_markers_pub_->get_topic_name()) > 0) {
+        visualization_msgs::msg::MarkerArray marker_array_msg;
+        for (auto marker_pair: map_.markers()) {
+          auto marker = marker_pair.second;
+          visualization_msgs::msg::Marker marker_msg;
+          marker_msg.id = marker.id();
+          marker_msg.header.frame_id = "map";
+          marker_msg.pose = marker.t_map_marker().to_pose_msg();
+          marker_msg.type = marker_msg.CUBE;
+          marker_msg.action = marker_msg.ADD;
+          marker_msg.scale.x = 0.1;
+          marker_msg.scale.y = 0.1;
+          marker_msg.scale.z = 0.01;
+          marker_msg.color.r = 1.f;
+          marker_msg.color.g = 1.f;
+          marker_msg.color.b = 0.f;
+          marker_msg.color.a = 1.f;
+          marker_array_msg.markers.push_back(marker_msg);
+        }
+        rviz_markers_pub_->publish(marker_array_msg);
+      }
+    }
+
+    void map_pub_timer_callback(void)
+    {
+      publish_map_and_visualization();
+    }
+
   };
 }
 
