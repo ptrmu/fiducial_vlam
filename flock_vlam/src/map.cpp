@@ -160,12 +160,12 @@ namespace flock_vlam
 
     // Create one entry in the map for now while debugging.
     auto first_marker_id = 1;
-   tf2::Vector3 t{0, 0, 1};
-   tf2::Quaternion q;
-   q.setX(0.5);
-   q.setY(-0.5);
-   q.setZ(-0.5);
-   q.setW(0.5);
+    tf2::Vector3 t{0, 0, 1};
+    tf2::Quaternion q;
+    q.setX(0.5);
+    q.setY(-0.5);
+    q.setZ(-0.5);
+    q.setW(0.5);
 //     tf2::Vector3 t{0, 0, 0};
 //     tf2::Quaternion q;
 //     q.setX(0);
@@ -304,15 +304,17 @@ namespace flock_vlam
         auto &marker = marker_pair->second;
 
         // Build up two lists of corner points: 2D in the image frame, 3D in the map frame
-        std::vector<cv::Point3d> all_corners_f_map = marker.corners_f_map(map_.marker_length());
+        std::vector<cv::Point3d> all_corners_f_marker = marker.corners_f_marker(map_.marker_length());
         std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
 
         // Figure out image location.
         cv::Vec3d rvec, tvec;
-        cv::solvePnP(all_corners_f_map, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
+        cv::solvePnP(all_corners_f_marker, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
 
-        // Take the inverse of the returned t_camera_map to get t_map_camera;
-        TransformWithCovariance t_map_camera(tf2_util::to_tf2_transform(rvec, tvec).inverse(), 0.);
+        // The solvePnP function returns the marker in the camera frame: t_camera_marker
+        auto tf2_marker_camera = tf2_util::to_tf2_transform(rvec, tvec).inverse();
+        auto tf2_map_camera = marker.t_map_marker().transform() * tf2_marker_camera;
+        TransformWithCovariance t_map_camera(tf2_map_camera, 0.);
 
         // Average this new measurement with the previous
         if (observations_count == 0) {

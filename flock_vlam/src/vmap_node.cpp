@@ -109,12 +109,12 @@ namespace flock_vlam
                                                        const cv::Mat &dist_coeffs)
     {
       // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
-      std::vector<cv::Point3d> all_corners_f_map = Marker::corners_f_marker(map().marker_length());
+      std::vector<cv::Point3d> all_corners_f_marker = Marker::corners_f_marker(map().marker_length());
       std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
 
       // Figure out image location.
       cv::Vec3d rvec, tvec;
-      cv::solvePnP(all_corners_f_map, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
+      cv::solvePnP(all_corners_f_marker, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
 
       // rvec, tvec output from solvePnp "brings points from the model coordinate system to the
       // camera coordinate system". In this case the marker frame is the model coordinate system.
