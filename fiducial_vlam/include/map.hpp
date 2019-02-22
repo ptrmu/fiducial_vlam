@@ -1,13 +1,13 @@
-#ifndef FLOCK_VLAM_MAP_H
-#define FLOCK_VLAM_MAP_H
+#ifndef FIDUCIAL_VLAM_MAP_H
+#define FIDUCIAL_VLAM_MAP_H
 
 #include <map>
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "flock_vlam_msgs/msg/map.hpp"
-#include "flock_vlam_msgs/msg/observation.hpp"
-#include "flock_vlam_msgs/msg/observations.hpp"
+#include "fiducial_vlam_msgs/msg/map.hpp"
+#include "fiducial_vlam_msgs/msg/observation.hpp"
+#include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "std_msgs/msg/header.hpp"
@@ -21,7 +21,7 @@
 //  xxx_f_destination means xxx is expressed in destination frame
 //  xxx_pose_f_destination is equivalent to t_destination_xxx
 
-namespace flock_vlam
+namespace fiducial_vlam
 {
 
 //=============
@@ -88,7 +88,7 @@ namespace flock_vlam
       : id_(id), corners_f_image_(corners_image_corner)
     {}
 
-    explicit Observation(const flock_vlam_msgs::msg::Observation &msg)
+    explicit Observation(const fiducial_vlam_msgs::msg::Observation &msg)
       : id_(msg.id), corners_f_image_{
       cv::Point2f(msg.x0, msg.y0),
       cv::Point2f(msg.x1, msg.y1),
@@ -115,12 +115,12 @@ namespace flock_vlam
   public:
     Observations(std::vector<int> ids, std::vector<std::vector<cv::Point2f>> corners);
 
-    explicit Observations(const flock_vlam_msgs::msg::Observations &msg);
+    explicit Observations(const fiducial_vlam_msgs::msg::Observations &msg);
 
     auto observations()
     { return observations_; }
 
-    flock_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
+    fiducial_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
                                               const sensor_msgs::msg::CameraInfo &camera_info_msg);
   };
 
@@ -205,9 +205,9 @@ namespace flock_vlam
     auto marker_length()
     { return marker_length_; }
 
-    void load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg);
+    void load_from_msg(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
-    flock_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length);
+    fiducial_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length);
 
     void to_YAML_string(std::string &yaml);
 
@@ -250,6 +250,6 @@ namespace flock_vlam
 
   void log_tf_transform(rclcpp::Node &node, const std::string s, const tf2::Transform &transform);
 
-} // namespace flock_vlam
+} // namespace fiducial_vlam
 
-#endif //FLOCK_VLAM_MAP_H
+#endif //FIDUCIAL_VLAM_MAP_H

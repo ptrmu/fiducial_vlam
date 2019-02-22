@@ -3,7 +3,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "flock_vlam_msgs/msg/observations.hpp"
+#include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
@@ -16,7 +16,7 @@
 
 #include "map.hpp"
 
-namespace flock_vlam
+namespace fiducial_vlam
 {
 
 //=============
@@ -143,9 +143,9 @@ namespace flock_vlam
 
     int callbacks_processed_{0};
 
-    rclcpp::Subscription<flock_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
+    rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
 
-    rclcpp::Publisher<flock_vlam_msgs::msg::Map>::SharedPtr map_pub_;
+    rclcpp::Publisher<fiducial_vlam_msgs::msg::Map>::SharedPtr map_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rviz_markers_pub_;
 
     rclcpp::TimerBase::SharedPtr map_pub_timer_;
@@ -159,11 +159,11 @@ namespace flock_vlam
 
       // ROS subscriptions
       auto observations_sub_cb = std::bind(&VmapNode::observations_callback, this, std::placeholders::_1);
-      observations_sub_ = create_subscription<flock_vlam_msgs::msg::Observations>("/flock_observations",
+      observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>("/fiducial_observations",
                                                                                   observations_sub_cb);
 
       // ROS publishers
-      map_pub_ = create_publisher<flock_vlam_msgs::msg::Map>("/flock_map", 8);
+      map_pub_ = create_publisher<fiducial_vlam_msgs::msg::Map>("/fiducial_map", 8);
       rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/rviz_markers", 1);
 
       // timer for publishing map info
@@ -175,7 +175,7 @@ namespace flock_vlam
 
   private:
 
-    void observations_callback(const flock_vlam_msgs::msg::Observations::SharedPtr msg)
+    void observations_callback(const fiducial_vlam_msgs::msg::Observations::SharedPtr msg)
     {
       callbacks_processed_ += 1;
 
@@ -201,7 +201,7 @@ namespace flock_vlam
           publish_map_and_visualization();
 
           // Save the map to a file as well
-          //map_.save_to_file("src/flock_vlam/flock_vlam/cfg/generated_map.yaml");
+          //map_.save_to_file("src/fiducial_vlam/fiducial_vlam/cfg/generated_map.yaml");
         }
       }
     }
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Create node
-  auto node = std::make_shared<flock_vlam::VmapNode>();
+  auto node = std::make_shared<fiducial_vlam::VmapNode>();
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin until rclcpp::ok() returns false

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(flock_vlam)
+project(fiducial_vlam)
 
 #=============
 # Setup
@@ -18,14 +18,14 @@ endif()
 # Emulate colcon
 if($ENV{CLION_IDE})
   message("Running inside CLion")
-  set(flock_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/flock_vlam_msgs/share/flock_vlam_msgs/cmake")
+  set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
 endif()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(flock_vlam_msgs REQUIRED)
+find_package(fiducial_vlam_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -37,7 +37,7 @@ find_package(yaml_cpp_vendor REQUIRED)
 # Local includes
 include_directories(
   include
-  ${flock_vlam_msgs_INCLUDE_DIRS}
+  ${fiducial_vlam_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
@@ -66,7 +66,7 @@ add_executable(vloc_node
 
 ament_target_dependencies(vloc_node
   cv_bridge
-  flock_vlam_msgs
+  fiducial_vlam_msgs
   geometry_msgs
   OpenCV
   rclcpp
@@ -87,7 +87,7 @@ add_executable(vmap_node
 
 ament_target_dependencies(vmap_node
   cv_bridge
-  flock_vlam_msgs
+  fiducial_vlam_msgs
   geometry_msgs
   OpenCV
   rclcpp
@@ -106,7 +106,7 @@ install(
   TARGETS
   vloc_node
   vmap_node
-  DESTINATION lib/flock_vlam
+  DESTINATION lib/fiducial_vlam
 )
 
 # Install various directories
@@ -114,7 +114,7 @@ install(
   DIRECTORY
   cfg
   launch
-  DESTINATION share/flock_vlam
+  DESTINATION share/fiducial_vlam
 )
 
 #=============
