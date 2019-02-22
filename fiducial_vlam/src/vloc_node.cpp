@@ -1,8 +1,8 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include "flock_vlam_msgs/msg/map.hpp"
-#include "flock_vlam_msgs/msg/observations.hpp"
+#include "fiducial_vlam_msgs/msg/map.hpp"
+#include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
@@ -14,7 +14,7 @@
 
 #include "map.hpp"
 
-namespace flock_vlam
+namespace fiducial_vlam
 {
 
 //=============
@@ -28,10 +28,10 @@ namespace flock_vlam
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
-    rclcpp::Subscription<flock_vlam_msgs::msg::Map>::SharedPtr map_sub_;
+    rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_;
-    rclcpp::Publisher<flock_vlam_msgs::msg::Observations>::SharedPtr observations_pub_;
+    rclcpp::Publisher<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_;
 
     bool have_camera_info_{false};
@@ -55,12 +55,12 @@ namespace flock_vlam
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>("image_raw", image_raw_sub_cb);
 
       auto map_sub_cb = std::bind(&VlocNode::map_callback, this, std::placeholders::_1);
-      map_sub_ = create_subscription<flock_vlam_msgs::msg::Map>("/flock_map", map_sub_cb);
+      map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>("/fiducial_map", map_sub_cb);
 
 
       // ROS publishers
       camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 1);
-      observations_pub_ = create_publisher<flock_vlam_msgs::msg::Observations>("/flock_observations", 1);
+      observations_pub_ = create_publisher<fiducial_vlam_msgs::msg::Observations>("/fiducial_observations", 1);
       image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
 
       detectorParameters_->doCornerRefinement = true;
@@ -94,7 +94,7 @@ namespace flock_vlam
       process_image(color, msg->header);
     }
 
-    void map_callback(const flock_vlam_msgs::msg::Map::SharedPtr msg)
+    void map_callback(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
     {
       map_.load_from_msg(msg);
     }
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
   rclcpp::init(argc, argv);
 
   // Create node
-  auto node = std::make_shared<flock_vlam::VlocNode>();
+  auto node = std::make_shared<fiducial_vlam::VlocNode>();
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin until rclcpp::ok() returns false

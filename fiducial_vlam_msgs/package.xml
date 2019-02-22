@@ -2,15 +2,15 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>flock_vlam_msgs</name>
+  <name>fiducial_vlam_msgs</name>
   <version>0.1.0</version>
-  <description>flock_vlam_msgs for ROS2</description>
+  <description>fiducial_vlam_msgs for ROS2</description>
 
   <maintainer email="ptrmu@outlook.com">Peter Mullen</maintainer>
   <license>BSD</license>
 
-  <url type="repository">https://github.com/ptrmu/flock_vlam.git</url>
-  <url type="bugtracker">https://github.com/ptrmu/flock_vlam/issues</url>
+  <url type="repository">https://github.com/ptrmu/fiducial_vlam.git</url>
+  <url type="bugtracker">https://github.com/ptrmu/fiducial_vlam/issues</url>
 
   <author>Clyde McQueen</author>
   <author>Peter Mullen</author>

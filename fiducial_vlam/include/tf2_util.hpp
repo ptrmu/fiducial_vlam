@@ -1,6 +1,6 @@
 
-#ifndef FLOCK_VLAM_TF_UTIL_HPP
-#define FLOCK_VLAM_TF_UTIL_HPP
+#ifndef FIDUCIAL_VLAM_TF_UTIL_HPP
+#define FIDUCIAL_VLAM_TF_UTIL_HPP
 
 #include "opencv2/core.hpp"
 
@@ -16,4 +16,4 @@ namespace tf2_util
   void load_camera_info(const sensor_msgs::msg::CameraInfo &msg, cv::Mat &camera_matrix, cv::Mat &dist_coeffs);
 }
 
-#endif //FLOCK_VLAM_TF_UTIL_HPP
+#endif //FIDUCIAL_VLAM_TF_UTIL_HPP

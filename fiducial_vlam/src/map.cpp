@@ -13,7 +13,7 @@
 #include "yaml-cpp/yaml.h"
 
 
-namespace flock_vlam
+namespace fiducial_vlam
 {
 
 //=============
@@ -82,7 +82,7 @@ namespace flock_vlam
     }
   }
 
-  Observations::Observations(const flock_vlam_msgs::msg::Observations &msg)
+  Observations::Observations(const fiducial_vlam_msgs::msg::Observations &msg)
   {
     for (auto o : msg.observations) {
 
@@ -90,14 +90,14 @@ namespace flock_vlam
     }
   }
 
-  flock_vlam_msgs::msg::Observations Observations::to_msg(const std_msgs::msg::Header &header_msg,
+  fiducial_vlam_msgs::msg::Observations Observations::to_msg(const std_msgs::msg::Header &header_msg,
                                                           const sensor_msgs::msg::CameraInfo &camera_info_msg)
   {
-    flock_vlam_msgs::msg::Observations msg;
+    fiducial_vlam_msgs::msg::Observations msg;
     msg.header = header_msg;
     msg.camera_info = camera_info_msg;
     for (auto observation : observations_) {
-      flock_vlam_msgs::msg::Observation obs_msg;
+      fiducial_vlam_msgs::msg::Observation obs_msg;
       obs_msg.id = observation.id();
       obs_msg.x0 = observation.corners_f_image()[0].x;
       obs_msg.x1 = observation.corners_f_image()[1].x;
@@ -187,7 +187,7 @@ namespace flock_vlam
 //    from_YAML_string(yaml);
   }
 
-  void Map::load_from_msg(const flock_vlam_msgs::msg::Map::SharedPtr msg)
+  void Map::load_from_msg(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
   {
     marker_length_ = msg->marker_length;
     markers_.clear();
@@ -198,9 +198,9 @@ namespace flock_vlam
     }
   }
 
-  flock_vlam_msgs::msg::Map Map::to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length)
+  fiducial_vlam_msgs::msg::Map Map::to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length)
   {
-    flock_vlam_msgs::msg::Map map_msg;
+    fiducial_vlam_msgs::msg::Map map_msg;
     for (auto marker_pair : markers_) {
       auto &marker = marker_pair.second;
       map_msg.ids.push_back(marker.id());

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(flock_vlam_msgs)
+project(fiducial_vlam_msgs)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
