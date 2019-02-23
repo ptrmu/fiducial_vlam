@@ -75,7 +75,7 @@ namespace fiducial_vlam
       if (!have_camera_info_) {
         // Save the info message because we pass it along with the observations.
         cameraInfo_ = *msg;
-        tf2_util::load_camera_info(*msg, camera_matrix_, dist_coeffs_);
+        to_camera_info(*msg, camera_matrix_, dist_coeffs_);
 
         RCLCPP_INFO(get_logger(), "have camera info");
         have_camera_info_ = true;
@@ -123,7 +123,7 @@ namespace fiducial_vlam
 
       if (camera_pose_f_map.is_valid()) {
         // Publish the camera pose in the map frame
-        auto camera_pose_f_map_msg = tf2_util::to_PoseWithCovarianceStamped_msg(camera_pose_f_map, header_msg);
+        auto camera_pose_f_map_msg = to_PoseWithCovarianceStamped_msg(camera_pose_f_map, header_msg);
 
         // for now just publish a pose message not a pose
         geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;

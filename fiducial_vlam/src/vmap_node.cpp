@@ -122,7 +122,7 @@ namespace fiducial_vlam
       // or equivalently t_map_marker. pre-multiply the rvec, tvec transform by camera_pose_f_map
       // before returning it. In other words:
       // t_map_marker = t_map_camera * t_camera_marker.
-      auto t_map_marker = camera_pose_f_map.transform() * tf2_util::to_tf2_transform(rvec, tvec);
+      auto t_map_marker = camera_pose_f_map.transform() * to_tf2_transform(rvec, tvec);
 
       // ToDo: get some covariance estimate
       return TransformWithCovariance(t_map_marker);
@@ -182,7 +182,7 @@ namespace fiducial_vlam
       // Get the cameraInfo from the message
       cv::Mat camera_matrix;
       cv::Mat dist_coeffs;
-      tf2_util::load_camera_info(msg->camera_info, camera_matrix, dist_coeffs);
+      to_camera_info(msg->camera_info, camera_matrix, dist_coeffs);
 
       // Get observations from the message.
       Observations observations(*msg);
@@ -224,7 +224,7 @@ namespace fiducial_vlam
           visualization_msgs::msg::Marker marker_msg;
           marker_msg.id = marker.id();
           marker_msg.header.frame_id = "map";
-          marker_msg.pose = tf2_util::to_Pose_msg(marker.t_map_marker());
+          marker_msg.pose = to_Pose_msg(marker.t_map_marker());
           marker_msg.type = marker_msg.CUBE;
           marker_msg.action = marker_msg.ADD;
           marker_msg.scale.x = 0.1;

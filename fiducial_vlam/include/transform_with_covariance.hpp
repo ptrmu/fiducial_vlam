@@ -31,31 +31,30 @@ namespace fiducial_vlam
     }
 
   public:
-    TransformWithCovariance()
-    {}
+    TransformWithCovariance() = default;
 
     TransformWithCovariance(const tf2::Transform &transform, const cov_type &cov)
       : is_valid_(true), transform_(transform), cov_(cov)
     {}
 
-    TransformWithCovariance(const tf2::Transform &transform)
-      : is_valid_(true), transform_(transform)
+    explicit TransformWithCovariance(const tf2::Transform &transform)
+      : is_valid_(true), transform_(transform), cov_{}
     {}
 
     TransformWithCovariance(const mu_type &mu, const cov_type &cov)
       : is_valid_(true), transform_(to_transform(mu)), cov_(cov)
     {}
 
-    TransformWithCovariance(const mu_type &mu)
-      : is_valid_(true), transform_(to_transform(mu))
+    explicit TransformWithCovariance(const mu_type &mu)
+      : is_valid_(true), transform_(to_transform(mu)), cov_{}
     {}
 
-    TransformWithCovariance(const tf2::Quaternion &q)
-      : is_valid_(true), transform_(q)
+    explicit TransformWithCovariance(const tf2::Quaternion &q)
+      : is_valid_(true), transform_(q), cov_{}
     {}
 
     TransformWithCovariance(const tf2::Quaternion &q, tf2::Vector3 &c)
-      : is_valid_(true), transform_(q, c)
+      : is_valid_(true), transform_(q, c), cov_{}
     {}
 
     auto is_valid() const

@@ -6,7 +6,7 @@
 #include "tf2/LinearMath/Transform.h"
 #include "tf2/LinearMath/Quaternion.h"
 
-#include "tf2_util.hpp"
+#include "convert_util.hpp"
 
 #include "yaml-cpp/yaml.h"
 
@@ -191,7 +191,7 @@ namespace fiducial_vlam
     marker_length_ = msg->marker_length;
     markers_.clear();
     for (int i = 0; i < msg->ids.size(); i += 1) {
-      Marker marker(msg->ids[i], tf2_util::to_TransformWithCovariance(msg->poses[i]));
+      Marker marker(msg->ids[i], to_TransformWithCovariance(msg->poses[i]));
       marker.set_is_fixed(msg->fixed_flags[i] != 0);
       markers_[marker.id()] = marker;
     }
@@ -203,7 +203,7 @@ namespace fiducial_vlam
     for (auto marker_pair : markers_) {
       auto &marker = marker_pair.second;
       map_msg.ids.push_back(marker.id());
-      map_msg.poses.push_back(tf2_util::to_PoseWithCovariance_msg(marker.marker_pose_f_map()));
+      map_msg.poses.push_back(to_PoseWithCovariance_msg(marker.marker_pose_f_map()));
       map_msg.fixed_flags.push_back(marker.is_fixed() ? 1 : 0);
     }
     map_msg.header = header_msg;
@@ -311,7 +311,7 @@ namespace fiducial_vlam
         cv::solvePnP(all_corners_f_marker, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
 
         // The solvePnP function returns the marker in the camera frame: t_camera_marker
-        auto tf2_marker_camera = tf2_util::to_tf2_transform(rvec, tvec).inverse();
+        auto tf2_marker_camera = to_tf2_transform(rvec, tvec).inverse();
         auto tf2_map_camera = marker.t_map_marker().transform() * tf2_marker_camera;
         TransformWithCovariance t_map_camera(tf2_map_camera);
 
@@ -375,7 +375,7 @@ namespace fiducial_vlam
     // camera coordinate system". In our case the map frame is the model coordinate system.
     // So rvec, tvec are the transformation t_camera_map. This function returns camera_pose_f_map
     // or equivalently t_map_camera. Invert the rvec, tvec transform before returning it.
-    auto t_map_camera = tf2_util::to_tf2_transform(rvec, tvec).inverse();
+    auto t_map_camera = to_tf2_transform(rvec, tvec).inverse();
 
     // ToDo: get some covariance estimate
     return TransformWithCovariance(t_map_camera);
@@ -408,7 +408,7 @@ namespace fiducial_vlam
 
         // Convert the pose to an OpenCV transform
         cv::Vec3d rvec, tvec;
-        tf2_util::to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
+        to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
 
         // Save this transform
         rvecs.push_back(rvec);
@@ -454,7 +454,7 @@ namespace fiducial_vlam
         cv::Vec3d rvec, tvec;
         cv::solvePnP(world_points, imagePoints, camera_matrix, dist_coeffs, rvec, tvec);
 
-        tf2::Transform t_camera_map_tf(tf2_util::to_tf2_transform(rvec, tvec));
+        tf2::Transform t_camera_map_tf(to_tf2_transform(rvec, tvec));
 
         // Figure out the pose of the marker in the camera frame
         auto t_camera_marker_tf = t_camera_map_tf * t_map_marker_tf;
