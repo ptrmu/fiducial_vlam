@@ -14,58 +14,15 @@
 
 #include "tf2/LinearMath/Transform.h"
 
+#include "transform_with_covariance.hpp"
 #include "tf2_util.hpp"
 
 // coordinate frame conventions
-//  t_destination_source is a transform
+//  t_destination_source is a transformation from source frame to destination frame
 //  xxx_f_destination means xxx is expressed in destination frame
-//  xxx_pose_f_destination is equivalent to t_destination_xxx
 
 namespace fiducial_vlam
 {
-
-//=============
-// TransformWithCovariance class
-//=============
-
-  class TransformWithCovariance
-  {
-    bool is_valid_{false};
-    tf2::Transform transform_;
-    double variance_; // add more dimensions to this at some point
-
-  public:
-    TransformWithCovariance() = default;
-
-    TransformWithCovariance(const tf2::Transform &transform, double variance)
-      : is_valid_(true), transform_(transform), variance_(variance)
-    {}
-
-    TransformWithCovariance(const cv::Vec3d &rvec, const cv::Vec3d &tvec, double variance)
-      : is_valid_(true), transform_(tf2_util::to_tf2_transform(rvec, tvec)), variance_(variance)
-    {}
-
-    explicit TransformWithCovariance(geometry_msgs::msg::PoseWithCovariance pose);
-
-    auto is_valid() const
-    { return is_valid_; }
-
-    auto transform() const
-    { return transform_; }
-
-    auto variance() const
-    { return variance_; }
-
-    geometry_msgs::msg::Pose to_pose_msg();
-
-    geometry_msgs::msg::PoseWithCovariance to_pose_with_covariance_msg();
-
-    geometry_msgs::msg::PoseStamped to_pose_stamped_msg(std_msgs::msg::Header &header);
-
-    geometry_msgs::msg::PoseWithCovarianceStamped to_pose_with_covariance_stamped_msg(std_msgs::msg::Header &header);
-
-    void update_simple_average(TransformWithCovariance &newVal, int previous_update_count);
-  };
 
 //=============
 // Observation class
@@ -73,18 +30,16 @@ namespace fiducial_vlam
 
   class Observation
   {
-    // The id of the marker
+    // The id of the marker that we observed.
     int id_;
 
     // The 2D pixel coordinates of the corners in the image.
     // The corners need to be in the same order as is returned
-    // from cv::aruco::detectMarkers()
+    // from cv::aruco::detectMarkers().
     std::vector<cv::Point2f> corners_f_image_;
 
   public:
-    Observation() = default;
-
-    Observation(int id, std::vector<cv::Point2f> corners_image_corner)
+    Observation(int id, const std::vector<cv::Point2f> &corners_image_corner)
       : id_(id), corners_f_image_(corners_image_corner)
     {}
 
@@ -100,7 +55,7 @@ namespace fiducial_vlam
     auto id() const
     { return id_; }
 
-    auto corners_f_image() const
+    auto &corners_f_image() const
     { return corners_f_image_; }
   };
 
@@ -110,18 +65,19 @@ namespace fiducial_vlam
 
   class Observations
   {
+    // The list of observations
     std::vector<Observation> observations_;
 
   public:
-    Observations(std::vector<int> ids, std::vector<std::vector<cv::Point2f>> corners);
+    Observations(const std::vector<int> &ids, const std::vector<std::vector<cv::Point2f>> &corners);
 
     explicit Observations(const fiducial_vlam_msgs::msg::Observations &msg);
 
-    auto observations()
+    auto &observations()
     { return observations_; }
 
     fiducial_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
-                                              const sensor_msgs::msg::CameraInfo &camera_info_msg);
+                                                 const sensor_msgs::msg::CameraInfo &camera_info_msg);
   };
 
 //=============
@@ -134,7 +90,7 @@ namespace fiducial_vlam
     int id_;
 
     // The pose of the marker in the map frame
-    TransformWithCovariance marker_pose_f_map_;
+    TransformWithCovariance t_map_marker_;
 
     // Prevent modification if true
     bool is_fixed_{false};
@@ -145,8 +101,8 @@ namespace fiducial_vlam
   public:
     Marker() = default;
 
-    Marker(int id, TransformWithCovariance marker_pose_f_map)
-      : id_(id), marker_pose_f_map_(marker_pose_f_map), update_count_(1)
+    Marker(int id, const TransformWithCovariance &t_map_marker)
+      : id_(id), t_map_marker_(t_map_marker), update_count_(1)
     {}
 
     auto id() const
@@ -164,11 +120,11 @@ namespace fiducial_vlam
     void set_update_count(int update_count)
     { update_count_ = update_count; }
 
-    auto marker_pose_f_map() const
-    { return marker_pose_f_map_; }
+    auto &marker_pose_f_map() const
+    { return t_map_marker_; }
 
-    auto t_map_marker() const
-    { return marker_pose_f_map_; }
+    auto &t_map_marker() const
+    { return t_map_marker_; }
 
     // Return the 3D coordinate cv::Point3d vectors of the marker corners in the map frame.
     // These corners need to be in the same order as the corners returned
@@ -180,7 +136,7 @@ namespace fiducial_vlam
     void update_simple_average(TransformWithCovariance &newVal)
     {
       if (!is_fixed_) {
-        marker_pose_f_map_.update_simple_average(newVal, update_count_);
+        t_map_marker_.update_simple_average(newVal, update_count_);
         update_count_ += 1;
       }
     }
@@ -194,7 +150,7 @@ namespace fiducial_vlam
   {
     const rclcpp::Node &node_;
     std::map<int, Marker> markers_;
-    float marker_length_;
+    double marker_length_;
 
   public:
     explicit Map(rclcpp::Node &node);

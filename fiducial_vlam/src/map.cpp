@@ -3,8 +3,6 @@
 
 #include "opencv2/calib3d.hpp"
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#include "tf2/convert.h"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2/LinearMath/Quaternion.h"
 
@@ -19,66 +17,67 @@ namespace fiducial_vlam
 //=============
 // TransformWithCovariance class
 //=============
-
-  TransformWithCovariance::TransformWithCovariance(geometry_msgs::msg::PoseWithCovariance pose)
-    : is_valid_(true), transform_(), variance_(0)
-  {
-    fromMsg(pose.pose, transform_);
-  }
-
-  geometry_msgs::msg::Pose TransformWithCovariance::to_pose_msg()
-  {
-    geometry_msgs::msg::Pose pose;
-    toMsg(transform_, pose);
-    return pose;
-  }
-
-  geometry_msgs::msg::PoseWithCovariance TransformWithCovariance::to_pose_with_covariance_msg()
-  {
-    geometry_msgs::msg::PoseWithCovariance msg;
-    msg.pose = to_pose_msg();
-    //msg.set__covariance() // ToDo move over the covariance
-    return msg;
-  }
-
-  geometry_msgs::msg::PoseStamped TransformWithCovariance::to_pose_stamped_msg(std_msgs::msg::Header &header)
-  {
-    geometry_msgs::msg::PoseStamped msg;
-    msg.header = header;
-    msg.pose = to_pose_msg();
-    return msg;
-  }
-
-  geometry_msgs::msg::PoseWithCovarianceStamped TransformWithCovariance::to_pose_with_covariance_stamped_msg(
-    std_msgs::msg::Header &header)
-  {
-    geometry_msgs::msg::PoseWithCovarianceStamped msg;
-    msg.header = header;
-    msg.pose = to_pose_with_covariance_msg();
-    return msg;
-  }
-
-  void TransformWithCovariance::update_simple_average(TransformWithCovariance &newVal, int previous_update_count)
-  {
-    double previous_weight = double(previous_update_count) / (previous_update_count + 1);
-    double current_weight = 1.0 / (previous_update_count + 1);
-
-    transform_.setOrigin(transform_.getOrigin() * previous_weight +
-                         newVal.transform_.getOrigin() * current_weight);
-
-    tf2::Quaternion q1 = transform_.getRotation();
-    tf2::Quaternion q2 = newVal.transform_.getRotation();
-    transform_.setRotation(q1.slerp(q2, current_weight).normalized());
-  }
+//
+//  TransformWithCovariance::TransformWithCovariance(geometry_msgs::msg::PoseWithCovariance pose)
+//    : is_valid_(true), transform_(), variance_(0)
+//  {
+//    fromMsg(pose.pose, transform_);
+//  }
+//
+//  geometry_msgs::msg::Pose TransformWithCovariance::to_Pose_msg()
+//  {
+//    geometry_msgs::msg::Pose pose;
+//    toMsg(transform_, pose);
+//    return pose;
+//  }
+//
+//  geometry_msgs::msg::PoseWithCovariance TransformWithCovariance::to_pose_with_covariance_msg()
+//  {
+//    geometry_msgs::msg::PoseWithCovariance msg;
+//    msg.pose = to_Pose_msg();
+//    //msg.set__covariance() // ToDo move over the covariance
+//    return msg;
+//  }
+//
+//  geometry_msgs::msg::PoseStamped TransformWithCovariance::to_pose_stamped_msg(std_msgs::msg::Header &header)
+//  {
+//    geometry_msgs::msg::PoseStamped msg;
+//    msg.header = header;
+//    msg.pose = to_Pose_msg();
+//    return msg;
+//  }
+//
+//  geometry_msgs::msg::PoseWithCovarianceStamped TransformWithCovariance::to_pose_with_covariance_stamped_msg(
+//    std_msgs::msg::Header &header)
+//  {
+//    geometry_msgs::msg::PoseWithCovarianceStamped msg;
+//    msg.header = header;
+//    msg.pose = to_pose_with_covariance_msg();
+//    return msg;
+//  }
+//
+//  void TransformWithCovariance::update_simple_average(TransformWithCovariance &newVal, int previous_update_count)
+//  {
+//    double previous_weight = double(previous_update_count) / (previous_update_count + 1);
+//    double current_weight = 1.0 / (previous_update_count + 1);
+//
+//    transform_.setOrigin(transform_.getOrigin() * previous_weight +
+//                         newVal.transform_.getOrigin() * current_weight);
+//
+//    tf2::Quaternion q1 = transform_.getRotation();
+//    tf2::Quaternion q2 = newVal.transform_.getRotation();
+//    transform_.setRotation(q1.slerp(q2, current_weight).normalized());
+//  }
 
 //=============
 // Observations class
 //=============
 
-  Observations::Observations(std::vector<int> ids, std::vector<std::vector<cv::Point2f>> corners)
+  Observations::Observations(const std::vector<int> &ids, const std::vector<std::vector<cv::Point2f>> &corners)
   {
+    assert(ids.size() == corners.size());
     for (int i = 0; i < ids.size(); i += 1) {
-      observations_.push_back(Observation(ids[i], corners[i]));
+      observations_.emplace_back(Observation(ids[i], corners[i]));
     }
   }
 
@@ -91,7 +90,7 @@ namespace fiducial_vlam
   }
 
   fiducial_vlam_msgs::msg::Observations Observations::to_msg(const std_msgs::msg::Header &header_msg,
-                                                          const sensor_msgs::msg::CameraInfo &camera_info_msg)
+                                                             const sensor_msgs::msg::CameraInfo &camera_info_msg)
   {
     fiducial_vlam_msgs::msg::Observations msg;
     msg.header = header_msg;
@@ -173,7 +172,7 @@ namespace fiducial_vlam
 //     q.setZ(0);
 //     q.setW(1);
     tf2::Transform first_marker_transform(q, t);
-    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform, 0.0);
+    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform);
     Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
     first_marker.set_is_fixed(true);
     markers_[first_marker_id] = first_marker;
@@ -192,7 +191,7 @@ namespace fiducial_vlam
     marker_length_ = msg->marker_length;
     markers_.clear();
     for (int i = 0; i < msg->ids.size(); i += 1) {
-      Marker marker(msg->ids[i], TransformWithCovariance(msg->poses[i]));
+      Marker marker(msg->ids[i], tf2_util::to_TransformWithCovariance(msg->poses[i]));
       marker.set_is_fixed(msg->fixed_flags[i] != 0);
       markers_[marker.id()] = marker;
     }
@@ -204,7 +203,7 @@ namespace fiducial_vlam
     for (auto marker_pair : markers_) {
       auto &marker = marker_pair.second;
       map_msg.ids.push_back(marker.id());
-      map_msg.poses.push_back(marker.marker_pose_f_map().to_pose_with_covariance_msg());
+      map_msg.poses.push_back(tf2_util::to_PoseWithCovariance_msg(marker.marker_pose_f_map()));
       map_msg.fixed_flags.push_back(marker.is_fixed() ? 1 : 0);
     }
     map_msg.header = header_msg;
@@ -265,7 +264,7 @@ namespace fiducial_vlam
             q.setY(q_node[1].as<double>());
             q.setZ(q_node[2].as<double>());
             q.setW(q_node[3].as<double>());
-            Marker marker(id, TransformWithCovariance(tf2::Transform(q, t), 0.0));
+            Marker marker(id, TransformWithCovariance(tf2::Transform(q, t)));
             marker.set_is_fixed(is_fixed);
             marker.set_update_count(update_count);
             markers_[id] = marker;
@@ -292,7 +291,7 @@ namespace fiducial_vlam
                                                                const cv::Mat &camera_matrix,
                                                                const cv::Mat &dist_coeffs)
   {
-    TransformWithCovariance average_t_map_camera;
+    TransformWithCovariance average_t_map_camera{};
     int observations_count{0};
 
     // For each observation.
@@ -314,7 +313,7 @@ namespace fiducial_vlam
         // The solvePnP function returns the marker in the camera frame: t_camera_marker
         auto tf2_marker_camera = tf2_util::to_tf2_transform(rvec, tvec).inverse();
         auto tf2_map_camera = marker.t_map_marker().transform() * tf2_marker_camera;
-        TransformWithCovariance t_map_camera(tf2_map_camera, 0.);
+        TransformWithCovariance t_map_camera(tf2_map_camera);
 
         // Average this new measurement with the previous
         if (observations_count == 0) {
@@ -379,7 +378,7 @@ namespace fiducial_vlam
     auto t_map_camera = tf2_util::to_tf2_transform(rvec, tvec).inverse();
 
     // ToDo: get some covariance estimate
-    return TransformWithCovariance(t_map_camera, 0.0);
+    return TransformWithCovariance(t_map_camera);
   }
 
 // Compute marker poses using Map info. Note this can only be done if
@@ -492,7 +491,7 @@ namespace fiducial_vlam
     transform.getBasis().getRPY(r, p, y);
 
     RCLCPP_DEBUG(node.get_logger(), "%s xyz:%lf %lf %lf, rpy:%lf %lf %lf",
-                s.c_str(), t.x(), t.y(), t.z(), r, p, y);
+                 s.c_str(), t.x(), t.y(), t.z(), r, p, y);
   }
 
 
