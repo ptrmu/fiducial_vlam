@@ -1,7 +1,3 @@
-//
-// Created by peter on 2/22/19.
-//
-
 #ifndef FIDUCIAL_VLAM_TRANSFORM_WITH_COVARIANCE_HPP
 #define FIDUCIAL_VLAM_TRANSFORM_WITH_COVARIANCE_HPP
 
@@ -38,7 +34,7 @@ namespace fiducial_vlam
     {}
 
     explicit TransformWithCovariance(const tf2::Transform &transform)
-      : is_valid_(true), transform_(transform), cov_{}
+      : is_valid_(true), transform_(transform), cov_()
     {}
 
     TransformWithCovariance(const mu_type &mu, const cov_type &cov)
@@ -46,15 +42,15 @@ namespace fiducial_vlam
     {}
 
     explicit TransformWithCovariance(const mu_type &mu)
-      : is_valid_(true), transform_(to_transform(mu)), cov_{}
+      : is_valid_(true), transform_(to_transform(mu)), cov_()
     {}
 
     explicit TransformWithCovariance(const tf2::Quaternion &q)
-      : is_valid_(true), transform_(q), cov_{}
+      : is_valid_(true), transform_(q), cov_()
     {}
 
     TransformWithCovariance(const tf2::Quaternion &q, tf2::Vector3 &c)
-      : is_valid_(true), transform_(q, c), cov_{}
+      : is_valid_(true), transform_(q, c), cov_()
     {}
 
     auto is_valid() const
@@ -74,7 +70,7 @@ namespace fiducial_vlam
       return mu_type{c[0], c[1], c[2], roll, pitch, yaw};
     }
 
-    void update_simple_average(TransformWithCovariance &newVal, int previous_update_count);
+    void update_simple_average(const TransformWithCovariance &newVal, int previous_update_count);
   };
 
 }
