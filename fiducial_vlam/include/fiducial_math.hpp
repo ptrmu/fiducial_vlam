@@ -22,12 +22,15 @@ namespace fiducial_vlam
     std::shared_ptr<CvCameraInfo> cv_;
 
   public:
-    CameraInfo() = delete;
+    CameraInfo();
 
     explicit CameraInfo(const sensor_msgs::msg::CameraInfo &camera_info);
 
     auto &cv() const
     { return cv_; }
+
+    bool is_valid() const
+    { return cv_ != nullptr; }
   };
 
 // ==============================================================================

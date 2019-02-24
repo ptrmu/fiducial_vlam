@@ -5,6 +5,10 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include "map.hpp"
+#include "vmap_context.hpp"
+#include "fiducial_math.hpp"
+
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
@@ -13,9 +17,6 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
-#include "map.hpp"
-#include "vmap_context.hpp"
-#include "fiducial_math.hpp"
 
 
 namespace fiducial_vlam
@@ -82,7 +83,6 @@ namespace fiducial_vlam
 
         auto t_camera_marker = fm.solve_t_camera_marker(observation);
         auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
-//        auto t_map_marker = fm.solve_t_map_marker(observation, t_map_camera);
 
         // Update an existing marker or add a new one.
         auto marker_pair = map().markers().find(observation.id());

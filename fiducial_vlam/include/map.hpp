@@ -44,7 +44,7 @@ namespace fiducial_vlam
     auto marker_length()
     { return marker_length_; }
 
-    void load_from_msg(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
+    void load_from_msg(const fiducial_vlam_msgs::msg::Map &msg);
 
     fiducial_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length);
 

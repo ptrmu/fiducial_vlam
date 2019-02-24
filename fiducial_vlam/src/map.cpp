@@ -186,13 +186,13 @@ namespace fiducial_vlam
 //    from_YAML_string(yaml);
   }
 
-  void Map::load_from_msg(const fiducial_vlam_msgs::msg::Map::SharedPtr msg)
+  void Map::load_from_msg(const fiducial_vlam_msgs::msg::Map &msg)
   {
-    marker_length_ = msg->marker_length;
+    marker_length_ = msg.marker_length;
     markers_.clear();
-    for (int i = 0; i < msg->ids.size(); i += 1) {
-      Marker marker(msg->ids[i], to_TransformWithCovariance(msg->poses[i]));
-      marker.set_is_fixed(msg->fixed_flags[i] != 0);
+    for (int i = 0; i < msg.ids.size(); i += 1) {
+      Marker marker(msg.ids[i], to_TransformWithCovariance(msg.poses[i]));
+      marker.set_is_fixed(msg.fixed_flags[i] != 0);
       markers_[marker.id()] = marker;
     }
   }

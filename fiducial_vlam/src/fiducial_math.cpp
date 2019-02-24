@@ -48,6 +48,9 @@ namespace fiducial_vlam
 // CameraInfo class
 // ==============================================================================
 
+  CameraInfo::CameraInfo()
+  {}
+
   CameraInfo::CameraInfo(const sensor_msgs::msg::CameraInfo &camera_info_msg)
     : cv_(std::make_shared<CameraInfo::CvCameraInfo>(camera_info_msg))
   {}
