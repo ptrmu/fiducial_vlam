@@ -163,6 +163,6 @@ namespace fiducial_vlam
     const Observation &observation,
     const TransformWithCovariance &t_map_camera)
   {
-    cv_->solve_t_map_marker(observation, t_map_camera);
+    return cv_->solve_t_map_marker(observation, t_map_camera);
   }
 }
