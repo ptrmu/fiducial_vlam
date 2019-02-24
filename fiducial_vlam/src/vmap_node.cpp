@@ -1,5 +1,7 @@
 
 #include <chrono>
+#include <iostream>
+#include <iomanip>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -7,6 +9,7 @@
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
@@ -221,37 +224,73 @@ namespace fiducial_vlam
       }
     }
 
+    tf2_msgs::msg::TFMessage to_tf_message()
+    {
+      auto stamp = now();
+      tf2_msgs::msg::TFMessage tf_message;
+
+      for (auto &marker_pair: map_.markers()) {
+        auto &marker = marker_pair.second;
+        auto mu = marker.t_map_marker().mu();
+
+        std::ostringstream oss_child_frame_id;
+        oss_child_frame_id << "marker_" << std::setfill('0') << std::setw(3) << marker.id();
+
+        tf2::Quaternion q;
+        q.setRPY(mu[3], mu[4], mu[5]);
+        auto tf2_transform = tf2::Transform(q, tf2::Vector3(mu[0], mu[1], mu[2]));
+
+        geometry_msgs::msg::TransformStamped msg;
+        msg.header.stamp = stamp;
+        msg.header.frame_id = "map";
+        msg.child_frame_id = oss_child_frame_id.str();
+        msg.transform = tf2::toMsg(tf2_transform);
+
+        tf_message.transforms.emplace_back(msg);
+      }
+
+      return tf_message;
+    }
+
+    visualization_msgs::msg::MarkerArray to_marker_array_msg()
+    {
+      visualization_msgs::msg::MarkerArray markers;
+      for (auto &marker_pair: map_.markers()) {
+        auto &marker = marker_pair.second;
+        visualization_msgs::msg::Marker marker_msg;
+        marker_msg.id = marker.id();
+        marker_msg.header.frame_id = "map";
+        marker_msg.pose = to_Pose_msg(marker.t_map_marker());
+        marker_msg.type = marker_msg.CUBE;
+        marker_msg.action = marker_msg.ADD;
+        marker_msg.scale.x = 0.1;
+        marker_msg.scale.y = 0.1;
+        marker_msg.scale.z = 0.01;
+        marker_msg.color.r = 1.f;
+        marker_msg.color.g = 1.f;
+        marker_msg.color.b = 0.f;
+        marker_msg.color.a = 1.f;
+        markers.markers.emplace_back(marker_msg);
+      }
+      return markers;
+    }
+
     void publish_map_and_visualization()
     {
       // publish the map
       std_msgs::msg::Header header;
       header.stamp = now();
       header.frame_id = "map";
-
-      auto map_msg = map_.to_map_msg(header, map_.marker_length());
-      map_pub_->publish(map_msg);
+      map_pub_->publish(map_.to_map_msg(header, map_.marker_length()));
 
       // Publish the marker Visualization
-      if (count_subscribers(rviz_markers_pub_->get_topic_name()) > 0) {
-        visualization_msgs::msg::MarkerArray marker_array_msg;
-        for (auto marker_pair: map_.markers()) {
-          auto marker = marker_pair.second;
-          visualization_msgs::msg::Marker marker_msg;
-          marker_msg.id = marker.id();
-          marker_msg.header.frame_id = "map";
-          marker_msg.pose = to_Pose_msg(marker.t_map_marker());
-          marker_msg.type = marker_msg.CUBE;
-          marker_msg.action = marker_msg.ADD;
-          marker_msg.scale.x = 0.1;
-          marker_msg.scale.y = 0.1;
-          marker_msg.scale.z = 0.01;
-          marker_msg.color.r = 1.f;
-          marker_msg.color.g = 1.f;
-          marker_msg.color.b = 0.f;
-          marker_msg.color.a = 1.f;
-          marker_array_msg.markers.push_back(marker_msg);
-        }
-        rviz_markers_pub_->publish(marker_array_msg);
+      if (cxt_.publish_marker_visualizations_) {
+        rviz_markers_pub_->publish(to_marker_array_msg());
+      }
+
+      // Publish the TFtree
+      if (cxt_.publish_marker_tfs_) {
+        tf_message_pub_->publish(to_tf_message());
       }
     }
   };

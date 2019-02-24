@@ -163,7 +163,7 @@ namespace fiducial_vlam
 
     void load_from_msg(const fiducial_vlam_msgs::msg::Map::SharedPtr msg);
 
-    fiducial_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length);
+    fiducial_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length);
 
     void to_YAML_string(std::string &yaml);
 

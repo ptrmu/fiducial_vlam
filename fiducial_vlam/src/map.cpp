@@ -85,7 +85,7 @@ namespace fiducial_vlam
   {
     for (auto o : msg.observations) {
 
-      observations_.push_back(Observation(o));
+      observations_.emplace_back(Observation(o));
     }
   }
 
@@ -106,7 +106,7 @@ namespace fiducial_vlam
       obs_msg.y1 = observation.corners_f_image()[1].y;
       obs_msg.y2 = observation.corners_f_image()[2].y;
       obs_msg.y3 = observation.corners_f_image()[3].y;
-      msg.observations.push_back(obs_msg);
+      msg.observations.emplace_back(obs_msg);
     }
     return msg;
   }
@@ -130,10 +130,10 @@ namespace fiducial_vlam
     auto corner3_f_map = t_map_marker_tf * corner3_f_marker;
 
     std::vector<cv::Point3d> corners_f_map;
-    corners_f_map.push_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
-    corners_f_map.push_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
-    corners_f_map.push_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
-    corners_f_map.push_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
+    corners_f_map.emplace_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
+    corners_f_map.emplace_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
+    corners_f_map.emplace_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
+    corners_f_map.emplace_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
 
     return corners_f_map;
   }
@@ -142,10 +142,10 @@ namespace fiducial_vlam
   {
     // Build up a list of the corner locations in the map frame.
     std::vector<cv::Point3d> corners_f_marker;
-    corners_f_marker.push_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
-    corners_f_marker.push_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
-    corners_f_marker.push_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
-    corners_f_marker.push_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
+    corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
+    corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
+    corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
+    corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
     return corners_f_marker;
   }
 
@@ -197,14 +197,14 @@ namespace fiducial_vlam
     }
   }
 
-  fiducial_vlam_msgs::msg::Map Map::to_map_msg(const std_msgs::msg::Header &header_msg, float marker_length)
+  fiducial_vlam_msgs::msg::Map Map::to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length)
   {
     fiducial_vlam_msgs::msg::Map map_msg;
-    for (auto marker_pair : markers_) {
+    for (auto &marker_pair : markers_) {
       auto &marker = marker_pair.second;
-      map_msg.ids.push_back(marker.id());
-      map_msg.poses.push_back(to_PoseWithCovariance_msg(marker.marker_pose_f_map()));
-      map_msg.fixed_flags.push_back(marker.is_fixed() ? 1 : 0);
+      map_msg.ids.emplace_back(marker.id());
+      map_msg.poses.emplace_back(to_PoseWithCovariance_msg(marker.marker_pose_f_map()));
+      map_msg.fixed_flags.emplace_back(marker.is_fixed() ? 1 : 0);
     }
     map_msg.header = header_msg;
     map_msg.marker_length = marker_length;
@@ -413,8 +413,8 @@ namespace fiducial_vlam
         to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
 
         // Save this transform
-        rvecs.push_back(rvec);
-        tvecs.push_back(tvec);
+        rvecs.emplace_back(rvec);
+        tvecs.emplace_back(tvec);
       }
     }
   }
@@ -444,10 +444,10 @@ namespace fiducial_vlam
         auto corner3_f_map = t_map_marker_tf * corner3_f_marker;
 
         std::vector<cv::Point3d> world_points;
-        world_points.push_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
-        world_points.push_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
-        world_points.push_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
-        world_points.push_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
+        world_points.emplace_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
+        world_points.emplace_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
+        world_points.emplace_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
+        world_points.emplace_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
 
         // get a list of the 2D corner locations in the image frame
         auto imagePoints = observation.corners_f_image();
@@ -476,8 +476,8 @@ namespace fiducial_vlam
         cv::Rodrigues(rmat, rvec);
 
         // Save this transform
-        rvecs.push_back(rvec);
-        tvecs.push_back(tvec);
+        rvecs.emplace_back(rvec);
+        tvecs.emplace_back(tvec);
       }
     }
   }
