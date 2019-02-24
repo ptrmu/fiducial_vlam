@@ -48,7 +48,7 @@ namespace fiducial_vlam
 
     virtual bool
     update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
-               const CameraInfo &ci) = 0;
+               FiducialMath &fm) = 0;
   };
 
 //=============
@@ -72,16 +72,14 @@ namespace fiducial_vlam
 
     virtual bool
     update_map(const TransformWithCovariance &t_map_camera, Observations &observations,
-               const CameraInfo &ci)
+               FiducialMath &fm)
     {
-      FiducialMath fm{ci, map().marker_length()};
-
       bool marker_added{false};
 
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
-        auto t_camera_marker = fm.solve_t_camera_marker(observation);
+        auto t_camera_marker = fm.solve_t_camera_marker(observation, map().marker_length());
         auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
 
         // Update an existing marker or add a new one.
@@ -175,23 +173,19 @@ namespace fiducial_vlam
       callbacks_processed_ += 1;
 
       CameraInfo ci{msg->camera_info};
-
-      // Get the cameraInfo from the message
-      cv::Mat camera_matrix;
-      cv::Mat dist_coeffs;
-      to_camera_info(msg->camera_info, camera_matrix, dist_coeffs);
+      FiducialMath fm{ci};
 
       // Get observations from the message.
       Observations observations(*msg);
 
       // Estimate the camera pose using the latest map estimate
-      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix, dist_coeffs);
+      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, fm);
 
       // We get an invalid pose if none of the visible markers pose's are known.
       if (camera_pose_f_map.is_valid()) {
 
         // Update our map with the observations
-        auto doPub = mapper_->update_map(camera_pose_f_map, observations, ci);
+        auto doPub = mapper_->update_map(camera_pose_f_map, observations, fm);
 
         // Publish the new map if requested
         if (doPub) {

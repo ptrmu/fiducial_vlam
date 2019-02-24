@@ -76,6 +76,9 @@ namespace fiducial_vlam
     auto &observations()
     { return observations_; }
 
+    auto size()
+    { return observations_.size(); }
+
     fiducial_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
                                                  const sensor_msgs::msg::CameraInfo &camera_info_msg);
   };

@@ -1,13 +1,11 @@
 
 #include "map.hpp"
 
-#include "opencv2/calib3d.hpp"
-
-#include "tf2/LinearMath/Transform.h"
-#include "tf2/LinearMath/Quaternion.h"
-
 #include "convert_util.hpp"
 
+#include "opencv2/calib3d.hpp"
+#include "tf2/LinearMath/Transform.h"
+#include "tf2/LinearMath/Quaternion.h"
 #include "yaml-cpp/yaml.h"
 
 
@@ -290,8 +288,7 @@ namespace fiducial_vlam
   }
 
   TransformWithCovariance Localizer::average_camera_pose_f_map(Observations &observations,
-                                                               const cv::Mat &camera_matrix,
-                                                               const cv::Mat &dist_coeffs)
+                                                               FiducialMath &fm)
   {
     TransformWithCovariance average_t_map_camera{};
     int observations_count{0};
@@ -304,18 +301,13 @@ namespace fiducial_vlam
       if (marker_pair != map_.markers().end()) {
         auto &marker = marker_pair->second;
 
-        // Build up two lists of corner points: 2D in the image frame, 3D in the map frame
-        std::vector<cv::Point3d> all_corners_f_marker = marker.corners_f_marker(map_.marker_length());
-        std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
-
-        // Figure out image location.
-        cv::Vec3d rvec, tvec;
-        cv::solvePnP(all_corners_f_marker, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
+        // Find the camera marker transform
+        auto t_camera_marker = fm.solve_t_camera_marker(observation, map_.marker_length());
 
         // The solvePnP function returns the marker in the camera frame: t_camera_marker
-        auto tf2_marker_camera = to_tf2_transform(rvec, tvec).inverse();
-        auto tf2_map_camera = marker.t_map_marker().transform() * tf2_marker_camera;
-        TransformWithCovariance t_map_camera(tf2_map_camera);
+        auto tf2_t_marker_camera = t_camera_marker.transform().inverse();
+        auto tf2_t_map_camera = marker.t_map_marker().transform() * tf2_t_marker_camera;
+        TransformWithCovariance t_map_camera(tf2_t_map_camera);
 
         // Average this new measurement with the previous
         if (observations_count == 0) {

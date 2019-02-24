@@ -7,6 +7,7 @@
 #include "observation.hpp"
 #include "transform_with_covariance.hpp"
 
+#include "cv_bridge/cv_bridge.h"
 #include "sensor_msgs/msg/camera_info.hpp"
 
 namespace fiducial_vlam
@@ -44,11 +45,15 @@ namespace fiducial_vlam
     std::shared_ptr<CvFiducialMath> cv_;
 
   public:
-    FiducialMath(const CameraInfo &camera_info, double marker_length);
+    FiducialMath(const CameraInfo &camera_info);
 
-    FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg, double marker_length);
+    FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg);
 
-    TransformWithCovariance solve_t_camera_marker(const Observation &observation);
+    TransformWithCovariance solve_t_camera_marker(const Observation &observation, double marker_length);
+
+    Observations detect_markers(cv_bridge::CvImagePtr &color);
+
+    void annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color, const TransformWithCovariance &t_camera_marker);
   };
 }
 

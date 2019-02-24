@@ -4,6 +4,7 @@
 #include "fiducial_math.hpp"
 #include "map.hpp"
 
+#include "cv_bridge/cv_bridge.h"
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -11,10 +12,6 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "std_msgs/msg/header.hpp"
-
-#include "cv_bridge/cv_bridge.h"
-#include "opencv2/aruco.hpp" // todo: remove
-
 
 namespace fiducial_vlam
 {
@@ -34,26 +31,18 @@ namespace fiducial_vlam
     rclcpp::Publisher<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_pub_ =
       create_publisher<fiducial_vlam_msgs::msg::Observations>("/fiducial_observations", 16);
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_ =
-      create_publisher<sensor_msgs::msg::Image>("image_marked", 1);
+      create_publisher<sensor_msgs::msg::Image>("image_marked", 16);
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
     sensor_msgs::msg::CameraInfo camera_info_msg_;
-    cv::Mat camera_matrix_; // todo: remove
-    cv::Mat dist_coeffs_; // todo: remove
-
-    cv::Ptr<cv::aruco::Dictionary> dictionary_ = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
-    cv::Ptr<cv::aruco::DetectorParameters> detectorParameters_ = cv::aruco::DetectorParameters::create();
 
   public:
-
     VlocNode()
       : Node("vloc_node"), map_(*this), camera_info_(), localizer_(*this, map_)
     {
-      detectorParameters_->doCornerRefinement = true;
-
       // ROS subscriptions
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         "camera_info",
@@ -62,7 +51,6 @@ namespace fiducial_vlam
           if (!camera_info_.is_valid()) {
             // Save the info message because we pass it along with the observations.
             camera_info_msg_ = *msg;
-            to_camera_info(*msg, camera_matrix_, dist_coeffs_);
             camera_info_ = CameraInfo(*msg);
 
             RCLCPP_INFO(this->get_logger(), "have camera info");
@@ -97,29 +85,23 @@ namespace fiducial_vlam
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(image_msg);
 
-      // Color to gray for detection
-      cv::Mat gray;
-      cv::cvtColor(color->image, gray, cv::COLOR_BGR2GRAY);
+      FiducialMath fm(camera_info_);
 
-      // Detect markers
-      std::vector<int> ids;
-      std::vector<std::vector<cv::Point2f>> corners;
-      cv::aruco::detectMarkers(gray, dictionary_, corners, ids, detectorParameters_);
-
-      RCLCPP_DEBUG(get_logger(), "process_image: Found %d markers", ids.size());
+      // Detect the markers in this image and create a list of
+      // observations.
+      Observations observations(fm.detect_markers(color));
 
       // Stop if no markers were detected
-      if (ids.size() == 0) {
+      if (observations.size() == 0) {
         return;
       }
 
-      // Calculate the pose of this camera in the map frame.
-      Observations observations(ids, corners);
-      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, camera_matrix_, dist_coeffs_);
+      // Find the camera pose from the observations.
+      auto t_map_camera = localizer_.average_camera_pose_f_map(observations, fm);
 
-      if (camera_pose_f_map.is_valid()) {
+      if (t_map_camera.is_valid()) {
         // Publish the camera pose in the map frame
-        auto camera_pose_f_map_msg = to_PoseWithCovarianceStamped_msg(camera_pose_f_map, image_msg.header);
+        auto camera_pose_f_map_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, image_msg.header);
 
         // for now just publish a pose message not a pose
         geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
@@ -136,7 +118,7 @@ namespace fiducial_vlam
       }
 
       // Publish the observations only if multiple markers exist in the image
-      if (ids.size() > 1) {
+      if (observations.size() > 1) {
         auto observations_msg = observations.to_msg(image_msg.header, camera_info_msg_);
         observations_pub_->publish(observations_msg);
       }
@@ -144,29 +126,29 @@ namespace fiducial_vlam
       // Publish an annotated image
       if (count_subscribers(image_marked_pub_->get_topic_name()) > 0) {
 
-        // Compute marker poses in two ways to verify that the math is working.
-        // Compute marker poses using OpenCV methods. The estimatePoseSingleMarkers() method
-        // returns the pose of the marker in the camera frame - t_camera_marker.
-//        std::vector<cv::Vec3d> rvecs, tvecs;
-//        cv::aruco::estimatePoseSingleMarkers(corners, marker_length_, camera_matrix_, dist_coeffs_, rvecs, tvecs);
+        // We can only annotate the image if the camera pose is known.
+        if (t_map_camera.is_valid()) {
 
-        // Compute marker poses using vlam info. Note this can only be done if
-        // a camera pose in map frame is determined and we have a marker pose in
-        // the map frame. The calculation is to take the marker location in the map
-        // frame t_map_marker and transform (pre-multiply) it by t_map_camera.inverse()
-        // to get t_camera_marker.
-        std::vector<cv::Vec3d> rvecs_map, tvecs_map;
-        localizer_.markers_pose_f_camera(camera_pose_f_map, ids, rvecs_map, tvecs_map);
+          // Cache a transform.
+          auto tf_t_camera_map = t_map_camera.transform().inverse();
 
-        // Draw poses
-//        for (int i = 0; i < rvecs.size(); i++) {
-//          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs[i], tvecs[i], 0.1);
-//        }
-        for (int i = 0; i < rvecs_map.size(); i++) {
-          cv::aruco::drawAxis(color->image, camera_matrix_, dist_coeffs_, rvecs_map[i], tvecs_map[i], 0.1);
+          // Loop through the ids of the markers visible in this image
+          for (auto &obs : observations.observations()) {
+
+            // Find this marker in the map
+            auto marker_pair = map_.markers().find(obs.id());
+            if (marker_pair != map_.markers().end()) {
+              auto &tf_t_map_marker = marker_pair->second.marker_pose_f_map().transform();
+
+              // Found a marker that is in the map and in the image. Calculate its
+              // transform to the camera frame and annotate the image.
+              auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * tf_t_map_marker);
+              fm.annotate_image_with_marker_axis(color, t_camera_marker);
+            }
+          }
         }
 
-        // Publish result
+        // Publish annotated image
         image_marked_pub_->publish(color->toImageMsg());
       }
     };

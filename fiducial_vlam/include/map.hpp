@@ -5,6 +5,12 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include "convert_util.hpp"
+#include "fiducial_math.hpp"
+#include "marker.hpp"
+#include "observation.hpp"
+#include "transform_with_covariance.hpp"
+
 #include "fiducial_vlam_msgs/msg/map.hpp"
 #include "fiducial_vlam_msgs/msg/observation.hpp"
 #include "fiducial_vlam_msgs/msg/observations.hpp"
@@ -13,11 +19,6 @@
 #include "std_msgs/msg/header.hpp"
 
 #include "tf2/LinearMath/Transform.h"
-
-#include "convert_util.hpp"
-#include "marker.hpp"
-#include "observation.hpp"
-#include "transform_with_covariance.hpp"
 
 // coordinate frame conventions
 //  t_destination_source is a transformation from source frame to destination frame
@@ -69,8 +70,7 @@ namespace fiducial_vlam
   public:
     Localizer(rclcpp::Node &node, Map &map);
 
-    TransformWithCovariance average_camera_pose_f_map(Observations &observations,
-                                                      const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs);
+    TransformWithCovariance average_camera_pose_f_map(Observations &observations, FiducialMath &fm);
 
     TransformWithCovariance estimate_camera_pose_f_map(Observations &observations,
                                                        const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs);

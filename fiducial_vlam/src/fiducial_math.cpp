@@ -4,6 +4,7 @@
 #include "marker.hpp"
 #include "convert_util.hpp"
 
+#include "opencv2/aruco.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 
 namespace fiducial_vlam
@@ -62,22 +63,22 @@ namespace fiducial_vlam
   class FiducialMath::CvFiducialMath
   {
     const CameraInfo ci_;
-    const double marker_length_;
 
   public:
-    CvFiducialMath(const CameraInfo &camera_info, double marker_length)
-      : ci_(camera_info), marker_length_(marker_length)
+    CvFiducialMath(const CameraInfo &camera_info)
+      : ci_(camera_info)
     {}
 
-    CvFiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg, double marker_length)
-      : ci_(camera_info_msg), marker_length_(marker_length)
+    CvFiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg)
+      : ci_(camera_info_msg)
     {}
 
     TransformWithCovariance solve_t_camera_marker(
-      const Observation &observation)
+      const Observation &observation,
+      double marker_length)
     {
       // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
-      std::vector<cv::Point3d> all_corners_f_marker = corners_f_marker();
+      std::vector<cv::Point3d> all_corners_f_marker = corners_f_marker(marker_length);
       std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
 
       // Figure out image location.
@@ -92,14 +93,44 @@ namespace fiducial_vlam
       return TransformWithCovariance(to_tf2_transform(rvec, tvec));
     }
 
+    Observations detect_markers(cv_bridge::CvImagePtr &color)
+    {
+      // Todo: make the dictionary a parameter
+      auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+      auto detectorParameters = cv::aruco::DetectorParameters::create();
+      detectorParameters->doCornerRefinement = true;
+
+      // Color to gray for detection
+      cv::Mat gray;
+      cv::cvtColor(color->image, gray, cv::COLOR_BGR2GRAY);
+
+      // Detect markers
+      std::vector<int> ids;
+      std::vector<std::vector<cv::Point2f>> corners;
+      cv::aruco::detectMarkers(gray, dictionary, corners, ids, detectorParameters);
+
+      return Observations(ids, corners);
+    }
+
+    void annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color, const TransformWithCovariance &t_camera_marker)
+    {
+      cv::Vec3d rvec;
+      cv::Vec3d tvec;
+      to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
+
+      cv::aruco::drawAxis(color->image,
+                          ci_.cv()->camera_matrix(), ci_.cv()->dist_coeffs(),
+                          rvec, tvec, 0.1);
+    }
+
   private:
-    std::vector<cv::Point3d> corners_f_map(const Marker &marker)
+    std::vector<cv::Point3d> corners_f_map(const Marker &marker, double marker_length)
     {
       // Build up a list of the corner locations in the map frame.
-      tf2::Vector3 corner0_f_marker(-marker_length_ / 2.f, marker_length_ / 2.f, 0.f);
-      tf2::Vector3 corner1_f_marker(marker_length_ / 2.f, marker_length_ / 2.f, 0.f);
-      tf2::Vector3 corner2_f_marker(marker_length_ / 2.f, -marker_length_ / 2.f, 0.f);
-      tf2::Vector3 corner3_f_marker(-marker_length_ / 2.f, -marker_length_ / 2.f, 0.f);
+      tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
+      tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
+      tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
+      tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
 
       auto t_map_marker_tf = marker.t_map_marker().transform();
       auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
@@ -116,14 +147,14 @@ namespace fiducial_vlam
       return corners_f_map;
     }
 
-    std::vector<cv::Point3d> corners_f_marker()
+    std::vector<cv::Point3d> corners_f_marker(double marker_length)
     {
       // Build up a list of the corner locations in the map frame.
       std::vector<cv::Point3d> corners_f_marker;
-      corners_f_marker.emplace_back(cv::Point3d(-marker_length_ / 2.f, marker_length_ / 2.f, 0.f));
-      corners_f_marker.emplace_back(cv::Point3d(marker_length_ / 2.f, marker_length_ / 2.f, 0.f));
-      corners_f_marker.emplace_back(cv::Point3d(marker_length_ / 2.f, -marker_length_ / 2.f, 0.f));
-      corners_f_marker.emplace_back(cv::Point3d(-marker_length_ / 2.f, -marker_length_ / 2.f, 0.f));
+      corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
+      corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
+      corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
+      corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
       return corners_f_marker;
     }
 
@@ -141,23 +172,51 @@ namespace fiducial_vlam
       tf2::Transform result(m, t);
       return result;
     }
+
+    void to_cv_rvec_tvec(const TransformWithCovariance &t, cv::Vec3d &rvec, cv::Vec3d &tvec)
+    {
+      auto c = t.transform().getOrigin();
+      tvec[0] = c.x();
+      tvec[1] = c.y();
+      tvec[2] = c.z();
+      auto R = t.transform().getBasis();
+      cv::Mat rmat(3, 3, CV_64FC1);
+      for (int row = 0; row < 3; row++) {
+        for (int col = 0; col < 3; col++) {
+          rmat.at<double>(row, col) = R[row][col];
+        }
+      }
+      cv::Rodrigues(rmat, rvec);
+    }
   };
 
 // ==============================================================================
 // FiducialMath class
 // ==============================================================================
 
-  FiducialMath::FiducialMath(const CameraInfo &camera_info, double marker_length)
-    : cv_(std::make_shared<CvFiducialMath>(camera_info, marker_length))
+  FiducialMath::FiducialMath(const CameraInfo &camera_info)
+    : cv_(std::make_shared<CvFiducialMath>(camera_info))
   {}
 
-  FiducialMath::FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg, double marker_length)
-    : cv_(std::make_shared<CvFiducialMath>(camera_info_msg, marker_length))
+  FiducialMath::FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg)
+    : cv_(std::make_shared<CvFiducialMath>(camera_info_msg))
   {}
 
   TransformWithCovariance FiducialMath::solve_t_camera_marker(
-    const Observation &observation)
+    const Observation &observation,
+    double marker_length)
   {
-    return cv_->solve_t_camera_marker(observation);
+    return cv_->solve_t_camera_marker(observation, marker_length);
+  }
+
+  Observations FiducialMath::detect_markers(cv_bridge::CvImagePtr &color)
+  {
+    return cv_->detect_markers(color);
+  }
+
+  void FiducialMath::annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color,
+                                                     const TransformWithCovariance &t_camera_marker)
+  {
+    cv_->annotate_image_with_marker_axis(color, t_camera_marker);
   }
 }
