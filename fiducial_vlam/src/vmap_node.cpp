@@ -10,11 +10,10 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
-#include "cv_bridge/cv_bridge.h"
-#include "opencv2/aruco.hpp"
 #include "opencv2/calib3d.hpp"
 
 #include "map.hpp"
+#include "vmap_context.hpp"
 
 namespace fiducial_vlam
 {
@@ -137,45 +136,61 @@ namespace fiducial_vlam
 
   class VmapNode : public rclcpp::Node
   {
+    VmapContext cxt_;
     Map map_;
     Localizer localizer_;
     std::shared_ptr<Mapper> mapper_;
 
     int callbacks_processed_{0};
 
+    // ROS publishers
+    rclcpp::Publisher<fiducial_vlam_msgs::msg::Map>::SharedPtr map_pub_ =
+      create_publisher<fiducial_vlam_msgs::msg::Map>("fiducial_map", 16);
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rviz_markers_pub_ =
+      create_publisher<visualization_msgs::msg::MarkerArray>("rviz_markers", 16);
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_ =
+      create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
-
-    rclcpp::Publisher<fiducial_vlam_msgs::msg::Map>::SharedPtr map_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rviz_markers_pub_;
-
     rclcpp::TimerBase::SharedPtr map_pub_timer_;
+    bool map_published_recently_ = false;
 
   public:
 
-    explicit VmapNode()
-      : Node("vmap_node"), map_(*this), localizer_(*this, map_)
+    VmapNode()
+      : Node("vmap_node"), cxt_(), map_(*this), localizer_(*this, map_)
     {
-      mapper_.reset(new MapperSimpleAverage(*this, map_));
+      mapper_ = std::make_shared<MapperSimpleAverage>(*this, map_);
+
+      // Get parameters from the command line
+      cxt_.load_parameters(*this);
 
       // ROS subscriptions
-      auto observations_sub_cb = std::bind(&VmapNode::observations_callback, this, std::placeholders::_1);
-      observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>("/fiducial_observations",
-                                                                                  observations_sub_cb);
+      observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
+        "fiducial_observations",
+        [this](const fiducial_vlam_msgs::msg::Observations::UniquePtr msg) -> void
+        {
+          this->observations_callback(msg);
+        },
+        16);
 
-      // ROS publishers
-      map_pub_ = create_publisher<fiducial_vlam_msgs::msg::Map>("/fiducial_map", 8);
-      rviz_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("/rviz_markers", 1);
-
-      // timer for publishing map info
-      auto map_pub_timer_cb = std::bind(&VmapNode::map_pub_timer_callback, this);
-      map_pub_timer_ = create_wall_timer(std::chrono::seconds(2), map_pub_timer_cb);
+      // Timer for publishing map info
+      map_pub_timer_ = create_wall_timer(
+        std::chrono::milliseconds(static_cast<int>(1000. / cxt_.marker_map_publish_frequency_hz_)),
+        [this]() -> void
+        {
+          if (!this->map_published_recently_) {
+            this->publish_map_and_visualization();
+          }
+          this->map_published_recently_ = false;
+        });
 
       RCLCPP_INFO(get_logger(), "vmap_node ready");
     }
 
   private:
 
-    void observations_callback(const fiducial_vlam_msgs::msg::Observations::SharedPtr msg)
+    void observations_callback(const fiducial_vlam_msgs::msg::Observations::UniquePtr &msg)
     {
       callbacks_processed_ += 1;
 
@@ -239,12 +254,6 @@ namespace fiducial_vlam
         rviz_markers_pub_->publish(marker_array_msg);
       }
     }
-
-    void map_pub_timer_callback(void)
-    {
-      publish_map_and_visualization();
-    }
-
   };
 }
 

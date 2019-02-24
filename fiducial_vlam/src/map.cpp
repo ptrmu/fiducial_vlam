@@ -211,6 +211,7 @@ namespace fiducial_vlam
     return map_msg;
   }
 
+#if 0
   void Map::load_from_file(std::string full_path)
   {
     YAML::Node config = YAML::LoadFile("config.yaml");
@@ -273,6 +274,7 @@ namespace fiducial_vlam
       }
     }
   }
+#endif
 
   void Map::save_to_file(std::string full_path)
   {

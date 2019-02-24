@@ -26,11 +26,12 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(fiducial_vlam_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tf2_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
 
@@ -41,6 +42,7 @@ include_directories(
   ${geometry_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
+  ${tf2_msgs_INCLUDE_DIRS}
   ${visualization_msgs_INCLUDE_DIRS}
   ${yaml_cpp_vendor_INCLUDE_DIRS}
 )
@@ -67,13 +69,10 @@ add_executable(vloc_node
 ament_target_dependencies(vloc_node
   cv_bridge
   fiducial_vlam_msgs
-  geometry_msgs
   OpenCV
   rclcpp
   sensor_msgs
   std_msgs
-  visualization_msgs
-  yaml_cpp_vendor
   )
 
 #=============
@@ -83,16 +82,15 @@ ament_target_dependencies(vloc_node
 add_executable(vmap_node
   src/vmap_node.cpp
   src/map.cpp
-  src/convert_util.cpp src/transform_with_covariance.cpp)
+  src/convert_util.cpp src/transform_with_covariance.cpp src/vmap_context.cpp)
 
 ament_target_dependencies(vmap_node
-  cv_bridge
   fiducial_vlam_msgs
   geometry_msgs
   OpenCV
   rclcpp
-  sensor_msgs
   std_msgs
+  tf2_msgs
   visualization_msgs
   yaml_cpp_vendor
   )
