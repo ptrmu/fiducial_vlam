@@ -87,8 +87,8 @@ add_executable(vmap_node
   src/map.cpp
   src/convert_util.cpp
   src/transform_with_covariance.cpp
-  src/vmap_context.cpp
   src/fiducial_math.cpp
+  src/vmap_context.cpp
   )
 
 ament_target_dependencies(vmap_node

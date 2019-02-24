@@ -4,7 +4,7 @@
 
 #include <array>
 
-#include "map.hpp"
+#include "observation.hpp"
 #include "transform_with_covariance.hpp"
 
 #include "sensor_msgs/msg/camera_info.hpp"
@@ -36,20 +36,17 @@ namespace fiducial_vlam
 
   class FiducialMath
   {
-    const CameraInfo ci_;
-    const double marker_length_;
+    class CvFiducialMath;
+
+    std::shared_ptr<CvFiducialMath> cv_;
 
   public:
-    FiducialMath(const CameraInfo &camera_info, double marker_length)
-      : ci_(camera_info), marker_length_(marker_length)
-    {}
+    FiducialMath(const CameraInfo &camera_info, double marker_length);
 
-    FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg, double marker_length)
-      : ci_(camera_info_msg), marker_length_(marker_length)
-    {}
+    FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg, double marker_length);
 
-    TransformWithCovariance estimate_t_map_marker(const Observation &observation,
-                                                  const TransformWithCovariance &camera_pose_f_map);
+    TransformWithCovariance solve_t_map_marker(const Observation &observation,
+                                               const TransformWithCovariance &camera_pose_f_map);
   };
 }
 

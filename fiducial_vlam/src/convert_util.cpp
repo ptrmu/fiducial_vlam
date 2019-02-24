@@ -41,6 +41,7 @@ namespace fiducial_vlam
     return TransformWithCovariance(tf);
   }
 
+  // todo remove when finished refactor
   tf2::Transform to_tf2_transform(const cv::Vec3d &rvec, const cv::Vec3d &tvec)
   {
     tf2::Vector3 t(tvec[0], tvec[1], tvec[2]);

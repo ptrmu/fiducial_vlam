@@ -80,7 +80,7 @@ namespace fiducial_vlam
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
-        auto t_map_marker = fm.estimate_t_map_marker(observation, camera_pose_f_map);
+        auto t_map_marker = fm.solve_t_map_marker(observation, camera_pose_f_map);
 
         // Update an existing marker or add a new one.
         auto marker_pair = map().markers().find(observation.id());
