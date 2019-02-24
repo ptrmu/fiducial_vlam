@@ -13,10 +13,10 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
-#include "opencv2/calib3d.hpp"
-
 #include "map.hpp"
 #include "vmap_context.hpp"
+#include "fiducial_math.hpp"
+
 
 namespace fiducial_vlam
 {
@@ -47,7 +47,7 @@ namespace fiducial_vlam
 
     virtual bool
     update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
-               const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs) = 0;
+               const CameraInfo &ci) = 0;
   };
 
 //=============
@@ -71,15 +71,16 @@ namespace fiducial_vlam
 
     virtual bool
     update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
-               const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs)
+               const CameraInfo &ci)
     {
+      FiducialMath fm{ci, map().marker_length()};
+
       bool marker_added{false};
 
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
-        auto t_map_marker = estimate_marker_pose_f_map(observation, camera_pose_f_map,
-                                                       camera_matrix, dist_coeffs);
+        auto t_map_marker = fm.estimate_t_map_marker(observation, camera_pose_f_map);
 
         // Update an existing marker or add a new one.
         auto marker_pair = map().markers().find(observation.id());
@@ -104,32 +105,6 @@ namespace fiducial_vlam
       observations_before_publish -= 1;
       return observations_before_publish == 0;
     }
-
-    TransformWithCovariance estimate_marker_pose_f_map(Observation &observation,
-                                                       const TransformWithCovariance &camera_pose_f_map,
-                                                       const cv::Mat &camera_matrix,
-                                                       const cv::Mat &dist_coeffs)
-    {
-      // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
-      std::vector<cv::Point3d> all_corners_f_marker = Marker::corners_f_marker(map().marker_length());
-      std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
-
-      // Figure out image location.
-      cv::Vec3d rvec, tvec;
-      cv::solvePnP(all_corners_f_marker, all_corners_f_image, camera_matrix, dist_coeffs, rvec, tvec);
-
-      // rvec, tvec output from solvePnp "brings points from the model coordinate system to the
-      // camera coordinate system". In this case the marker frame is the model coordinate system.
-      // So rvec, tvec are the transformation t_camera_marker. This function returns marker_pose_f_map
-      // or equivalently t_map_marker. pre-multiply the rvec, tvec transform by camera_pose_f_map
-      // before returning it. In other words:
-      // t_map_marker = t_map_camera * t_camera_marker.
-      auto t_map_marker = camera_pose_f_map.transform() * to_tf2_transform(rvec, tvec);
-
-      // ToDo: get some covariance estimate
-      return TransformWithCovariance(t_map_marker);
-    }
-
 
   };
 
@@ -197,6 +172,8 @@ namespace fiducial_vlam
     {
       callbacks_processed_ += 1;
 
+      CameraInfo ci{msg->camera_info};
+
       // Get the cameraInfo from the message
       cv::Mat camera_matrix;
       cv::Mat dist_coeffs;
@@ -212,7 +189,7 @@ namespace fiducial_vlam
       if (camera_pose_f_map.is_valid()) {
 
         // Update our map with the observations
-        auto doPub = mapper_->update_map(camera_pose_f_map, observations, camera_matrix, dist_coeffs);
+        auto doPub = mapper_->update_map(camera_pose_f_map, observations, ci);
 
         // Publish the new map if requested
         if (doPub) {

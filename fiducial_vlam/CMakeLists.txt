@@ -64,7 +64,10 @@ endif()
 add_executable(vloc_node
   src/vloc_node.cpp
   src/map.cpp
-  src/convert_util.cpp src/transform_with_covariance.cpp)
+  src/convert_util.cpp
+  src/transform_with_covariance.cpp
+  src/fiducial_math.cpp
+  )
 
 ament_target_dependencies(vloc_node
   cv_bridge
@@ -82,7 +85,11 @@ ament_target_dependencies(vloc_node
 add_executable(vmap_node
   src/vmap_node.cpp
   src/map.cpp
-  src/convert_util.cpp src/transform_with_covariance.cpp src/vmap_context.cpp)
+  src/convert_util.cpp
+  src/transform_with_covariance.cpp
+  src/vmap_context.cpp
+  src/fiducial_math.cpp
+  )
 
 ament_target_dependencies(vmap_node
   fiducial_vlam_msgs
