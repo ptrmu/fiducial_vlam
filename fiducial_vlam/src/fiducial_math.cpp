@@ -70,9 +70,8 @@ namespace fiducial_vlam
       : ci_(camera_info_msg), marker_length_(marker_length)
     {}
 
-    TransformWithCovariance solve_t_map_marker(
-      const Observation &observation,
-      const TransformWithCovariance &t_map_camera)
+    TransformWithCovariance solve_t_camera_marker(
+      const Observation &observation)
     {
       // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
       std::vector<cv::Point3d> all_corners_f_marker = corners_f_marker();
@@ -86,14 +85,8 @@ namespace fiducial_vlam
 
       // rvec, tvec output from solvePnp "brings points from the model coordinate system to the
       // camera coordinate system". In this case the marker frame is the model coordinate system.
-      // So rvec, tvec are the transformation t_camera_marker. This function returns marker_pose_f_map
-      // or equivalently t_map_marker. pre-multiply the rvec, tvec transform by t_map_camera
-      // before returning it. In other words:
-      // t_map_marker = t_map_camera * t_camera_marker.
-      auto t_map_marker = t_map_camera.transform() * to_tf2_transform(rvec, tvec);
-
-      // ToDo: get some covariance estimate
-      return TransformWithCovariance(t_map_marker);
+      // So rvec, tvec are the transformation t_camera_marker.
+      return TransformWithCovariance(to_tf2_transform(rvec, tvec));
     }
 
   private:
@@ -159,10 +152,9 @@ namespace fiducial_vlam
     : cv_(std::make_shared<CvFiducialMath>(camera_info_msg, marker_length))
   {}
 
-  TransformWithCovariance FiducialMath::solve_t_map_marker(
-    const Observation &observation,
-    const TransformWithCovariance &t_map_camera)
+  TransformWithCovariance FiducialMath::solve_t_camera_marker(
+    const Observation &observation)
   {
-    return cv_->solve_t_map_marker(observation, t_map_camera);
+    return cv_->solve_t_camera_marker(observation);
   }
 }

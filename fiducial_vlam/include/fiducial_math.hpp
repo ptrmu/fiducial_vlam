@@ -45,8 +45,7 @@ namespace fiducial_vlam
 
     FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg, double marker_length);
 
-    TransformWithCovariance solve_t_map_marker(const Observation &observation,
-                                               const TransformWithCovariance &camera_pose_f_map);
+    TransformWithCovariance solve_t_camera_marker(const Observation &observation);
   };
 }
 

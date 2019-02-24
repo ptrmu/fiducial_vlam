@@ -70,7 +70,7 @@ namespace fiducial_vlam
     {}
 
     virtual bool
-    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
+    update_map(const TransformWithCovariance &t_map_camera, Observations &observations,
                const CameraInfo &ci)
     {
       FiducialMath fm{ci, map().marker_length()};
@@ -80,7 +80,9 @@ namespace fiducial_vlam
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
-        auto t_map_marker = fm.solve_t_map_marker(observation, camera_pose_f_map);
+        auto t_camera_marker = fm.solve_t_camera_marker(observation);
+        auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
+//        auto t_map_marker = fm.solve_t_map_marker(observation, t_map_camera);
 
         // Update an existing marker or add a new one.
         auto marker_pair = map().markers().find(observation.id());
