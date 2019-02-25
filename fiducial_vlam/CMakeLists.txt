@@ -76,6 +76,7 @@ ament_target_dependencies(vloc_node
   rclcpp
   sensor_msgs
   std_msgs
+  tf2_msgs
   )
 
 #=============

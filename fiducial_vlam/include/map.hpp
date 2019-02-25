@@ -70,7 +70,7 @@ namespace fiducial_vlam
   public:
     Localizer(rclcpp::Node &node, Map &map);
 
-    TransformWithCovariance average_camera_pose_f_map(Observations &observations, FiducialMath &fm);
+    TransformWithCovariance average_t_map_camera(Observations &observations, FiducialMath &fm);
 
     TransformWithCovariance estimate_camera_pose_f_map(Observations &observations,
                                                        const cv::Mat &camera_matrix, const cv::Mat &dist_coeffs);

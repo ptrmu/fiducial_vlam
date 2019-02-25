@@ -287,8 +287,8 @@ namespace fiducial_vlam
   {
   }
 
-  TransformWithCovariance Localizer::average_camera_pose_f_map(Observations &observations,
-                                                               FiducialMath &fm)
+  TransformWithCovariance Localizer::average_t_map_camera(Observations &observations,
+                                                          FiducialMath &fm)
   {
     TransformWithCovariance average_t_map_camera{};
     int observations_count{0};

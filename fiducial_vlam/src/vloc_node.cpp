@@ -11,6 +11,8 @@
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_msgs/msg/tf_message.hpp"
 #include "std_msgs/msg/header.hpp"
 
 namespace fiducial_vlam
@@ -32,6 +34,8 @@ namespace fiducial_vlam
       create_publisher<fiducial_vlam_msgs::msg::Observations>("/fiducial_observations", 16);
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_ =
       create_publisher<sensor_msgs::msg::Image>("image_marked", 16);
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_ =
+      create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
@@ -97,15 +101,15 @@ namespace fiducial_vlam
       }
 
       // Find the camera pose from the observations.
-      auto t_map_camera = localizer_.average_camera_pose_f_map(observations, fm);
+      auto t_map_camera = localizer_.average_t_map_camera(observations, fm);
 
       if (t_map_camera.is_valid()) {
         // Publish the camera pose in the map frame
-        auto camera_pose_f_map_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, image_msg.header);
+        auto t_map_camera_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, image_msg.header);
 
         // for now just publish a pose message not a pose
         geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
-        cam_pose_f_map.pose.pose = camera_pose_f_map_msg.pose.pose;
+        cam_pose_f_map.pose.pose = t_map_camera_msg.pose.pose;
         cam_pose_f_map.header = image_msg.header;
         cam_pose_f_map.header.frame_id = "map";
         cam_pose_f_map.pose.covariance[0] = 6e-3;
@@ -115,18 +119,22 @@ namespace fiducial_vlam
         cam_pose_f_map.pose.covariance[28] = 2e-3;
         cam_pose_f_map.pose.covariance[35] = 2e-3;
         camera_pose_pub_->publish(cam_pose_f_map);
+
+        // Also publish the camera's tf
+        // todo: give the tf a name based on the camera id.
+        // todo: allow this to be turned on and off.
+        publish_camera_tf(t_map_camera);
       }
 
-      // Publish the observations only if multiple markers exist in the image
-      if (observations.size() > 1) {
-        auto observations_msg = observations.to_msg(image_msg.header, camera_info_msg_);
-        observations_pub_->publish(observations_msg);
-      }
+      // Publish the observations
+      auto observations_msg = observations.to_msg(image_msg.header, camera_info_msg_);
+      observations_pub_->publish(observations_msg);
 
       // Publish an annotated image
       if (count_subscribers(image_marked_pub_->get_topic_name()) > 0) {
 
-        // We can only annotate the image if the camera pose is known.
+        // The image can be annotated only if the camera pose is known.
+        // but the unannotated image should still be published.
         if (t_map_camera.is_valid()) {
 
           // Cache a transform.
@@ -151,7 +159,22 @@ namespace fiducial_vlam
         // Publish annotated image
         image_marked_pub_->publish(color->toImageMsg());
       }
-    };
+    }
+
+    void publish_camera_tf(const TransformWithCovariance & t_map_camera)
+    {
+      auto stamp = now();
+      tf2_msgs::msg::TFMessage tf_message;
+
+      geometry_msgs::msg::TransformStamped msg;
+      msg.header.stamp = stamp;
+      msg.header.frame_id = "map";
+      msg.child_frame_id = "camera";
+      msg.transform = tf2::toMsg(t_map_camera.transform());
+      tf_message.transforms.emplace_back(msg);
+
+      tf_message_pub_->publish(tf_message);
+    }
   };
 }
 

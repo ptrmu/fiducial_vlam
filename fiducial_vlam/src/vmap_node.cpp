@@ -46,7 +46,7 @@ namespace fiducial_vlam
     auto &map()
     { return map_; }
 
-    virtual bool
+    virtual void
     update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
                FiducialMath &fm) = 0;
   };
@@ -57,10 +57,6 @@ namespace fiducial_vlam
 
   class MapperSimpleAverage : public Mapper
   {
-    int observations_before_publish_base{10};
-    int observations_before_publish_reset{observations_before_publish_base};
-    int observations_before_publish{observations_before_publish_base};
-
   public:
     MapperSimpleAverage(rclcpp::Node &node, Map &map)
       : Mapper(node, map)
@@ -70,12 +66,10 @@ namespace fiducial_vlam
     virtual ~MapperSimpleAverage()
     {}
 
-    virtual bool
+    virtual void
     update_map(const TransformWithCovariance &t_map_camera, Observations &observations,
                FiducialMath &fm)
     {
-      bool marker_added{false};
-
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
 
@@ -90,20 +84,8 @@ namespace fiducial_vlam
 
         } else {
           map().markers()[observation.id()] = Marker(observation.id(), t_map_marker);
-          marker_added = true;
         }
       }
-
-      // For now publish a new map based on the number of images processed after a new marker is added.
-      if (marker_added) {
-        observations_before_publish = observations_before_publish_base;
-        observations_before_publish_reset = observations_before_publish_base;
-      } else if (observations_before_publish <= 0) {
-        observations_before_publish_reset += observations_before_publish_reset;
-        observations_before_publish = observations_before_publish_reset;
-      }
-      observations_before_publish -= 1;
-      return observations_before_publish == 0;
     }
 
   };
@@ -124,14 +106,13 @@ namespace fiducial_vlam
     // ROS publishers
     rclcpp::Publisher<fiducial_vlam_msgs::msg::Map>::SharedPtr map_pub_ =
       create_publisher<fiducial_vlam_msgs::msg::Map>("fiducial_map", 16);
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rviz_markers_pub_ =
-      create_publisher<visualization_msgs::msg::MarkerArray>("rviz_markers", 16);
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr fiducial_markers_pub_ =
+      create_publisher<visualization_msgs::msg::MarkerArray>("fiducial_markers", 16);
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_ =
       create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
 
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
     rclcpp::TimerBase::SharedPtr map_pub_timer_;
-    bool map_published_recently_ = false;
 
   public:
 
@@ -157,10 +138,7 @@ namespace fiducial_vlam
         std::chrono::milliseconds(static_cast<int>(1000. / cxt_.marker_map_publish_frequency_hz_)),
         [this]() -> void
         {
-          if (!this->map_published_recently_) {
-            this->publish_map_and_visualization();
-          }
-          this->map_published_recently_ = false;
+          this->publish_map_and_visualization();
         });
 
       RCLCPP_INFO(get_logger(), "vmap_node ready");
@@ -178,22 +156,19 @@ namespace fiducial_vlam
       // Get observations from the message.
       Observations observations(*msg);
 
+      // THere is nothing to do at this point unless we have more than one observation.
+      if (observations.size() < 2) {
+        return;
+      }
+
       // Estimate the camera pose using the latest map estimate
-      auto camera_pose_f_map = localizer_.average_camera_pose_f_map(observations, fm);
+      auto t_map_camera = localizer_.average_t_map_camera(observations, fm);
 
       // We get an invalid pose if none of the visible markers pose's are known.
-      if (camera_pose_f_map.is_valid()) {
+      if (t_map_camera.is_valid()) {
 
         // Update our map with the observations
-        auto doPub = mapper_->update_map(camera_pose_f_map, observations, fm);
-
-        // Publish the new map if requested
-        if (doPub) {
-          publish_map_and_visualization();
-
-          // Save the map to a file as well
-          //map_.save_to_file("src/fiducial_vlam/fiducial_vlam/cfg/generated_map.yaml");
-        }
+        mapper_->update_map(t_map_camera, observations, fm);
       }
     }
 
@@ -258,7 +233,7 @@ namespace fiducial_vlam
 
       // Publish the marker Visualization
       if (cxt_.publish_marker_visualizations_) {
-        rviz_markers_pub_->publish(to_marker_array_msg());
+        fiducial_markers_pub_->publish(to_marker_array_msg());
       }
 
       // Publish the TFtree
