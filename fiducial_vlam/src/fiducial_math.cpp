@@ -172,11 +172,11 @@ namespace fiducial_vlam
     {
       Observations observations;
       for (int i = 0; i < ids.size(); i += 1) {
-        observations.observations().emplace_back(Observation(ids[i],
-                                                             corners[i][0].x, corners[i][0].y,
-                                                             corners[i][1].x, corners[i][1].y,
-                                                             corners[i][2].x, corners[i][2].y,
-                                                             corners[i][3].x, corners[i][3].y));
+        observations.add(Observation(ids[i],
+                                     corners[i][0].x, corners[i][0].y,
+                                     corners[i][1].x, corners[i][1].y,
+                                     corners[i][2].x, corners[i][2].y,
+                                     corners[i][3].x, corners[i][3].y));
       }
       return observations;
     }

@@ -25,10 +25,11 @@ namespace fiducial_vlam
 
   class VlocNode : public rclcpp::Node
   {
-    VlocContext cxt_;
-    Map map_;
-    CameraInfo camera_info_;
-    Localizer localizer_;
+    VlocContext cxt_{};
+    std::shared_ptr<Map> map_{};
+    std::shared_ptr<CameraInfo> camera_info_{};
+    std::shared_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_;
+    Localizer localizer_{map_};
 
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_ =
       create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 16);
@@ -43,11 +44,10 @@ namespace fiducial_vlam
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Map>::SharedPtr map_sub_;
 
-    sensor_msgs::msg::CameraInfo camera_info_msg_;
 
   public:
     VlocNode()
-      : Node("vloc_node"), cxt_(), map_(*this), camera_info_(), localizer_(*this, map_)
+      : Node("vloc_node")
     {
       // Get parameters from the command line
       cxt_.load_parameters(*this);
@@ -55,12 +55,12 @@ namespace fiducial_vlam
       // ROS subscriptions
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         "camera_info",
-        [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg)
+        [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
-          if (!camera_info_.is_valid()) {
+          if (!camera_info_) {
+            camera_info_ = std::make_shared<CameraInfo>(*msg);
             // Save the info message because we pass it along with the observations.
-            camera_info_msg_ = *msg;
-            camera_info_ = CameraInfo(*msg);
+            camera_info_msg_ = std::make_shared<sensor_msgs::msg::CameraInfo>(*msg);
           }
         },
         16);
@@ -69,7 +69,8 @@ namespace fiducial_vlam
         "image_raw",
         [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
-          if (this->camera_info_.is_valid()) {
+          // A map and cameraInfo must be received before processing can start.
+          if (this->camera_info_ && this->map_) {
             this->process_image(*msg);
           }
         },
@@ -79,7 +80,7 @@ namespace fiducial_vlam
         "/fiducial_map",
         [this](const fiducial_vlam_msgs::msg::Map::UniquePtr msg) -> void
         {
-          this->map_.load_from_msg(*msg);
+          this->map_ = std::make_shared<Map>(*msg);
         },
         16);
 
@@ -92,7 +93,7 @@ namespace fiducial_vlam
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(image_msg);
 
-      FiducialMath fm(camera_info_);
+      FiducialMath fm(*camera_info_);
 
       // Detect the markers in this image and create a list of
       // observations.
@@ -131,7 +132,7 @@ namespace fiducial_vlam
       }
 
       // Publish the observations
-      auto observations_msg = observations.to_msg(image_msg.header, camera_info_msg_);
+      auto observations_msg = observations.to_msg(image_msg.header, *camera_info_msg_);
       observations_pub_->publish(observations_msg);
 
       // Publish an annotated image
@@ -148,8 +149,8 @@ namespace fiducial_vlam
           for (auto &obs : observations.observations()) {
 
             // Find this marker in the map
-            auto marker_pair = map_.markers().find(obs.id());
-            if (marker_pair != map_.markers().end()) {
+            auto marker_pair = map_->markers().find(obs.id());
+            if (marker_pair != map_->markers().end()) {
               auto &tf_t_map_marker = marker_pair->second.marker_pose_f_map().transform();
 
               // Found a marker that is in the map and in the image. Calculate its

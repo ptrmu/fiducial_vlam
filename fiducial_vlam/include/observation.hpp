@@ -89,11 +89,16 @@ namespace fiducial_vlam
 
     explicit Observations(const fiducial_vlam_msgs::msg::Observations &msg);
 
-    auto &observations()
+    auto &observations() const
     { return observations_; }
 
-    auto size()
+    auto size() const
     { return observations_.size(); }
+
+    void add(const Observation observation)
+    {
+      observations_.emplace_back(std::move(observation));
+    }
 
     fiducial_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
                                                  const sensor_msgs::msg::CameraInfo &camera_info_msg);

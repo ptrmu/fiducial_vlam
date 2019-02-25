@@ -27,25 +27,22 @@ namespace fiducial_vlam
 
   class Mapper
   {
-    rclcpp::Node &node_;
-    Map &map_;
+    std::shared_ptr<Map> &map_;
 
   public:
-    Mapper(rclcpp::Node &node, Map &map)
-      : node_(node), map_(map)
+    Mapper(std::shared_ptr<Map> &map)
+      : map_(map)
     {
     }
 
     virtual ~Mapper() = default;
 
-    auto &node() const
-    { return node_; }
-
     auto &map()
     { return map_; }
 
     virtual void
-    update_map(const TransformWithCovariance &camera_pose_f_map, Observations &observations,
+    update_map(const TransformWithCovariance &camera_pose_f_map,
+               const Observations &observations,
                FiducialMath &fm) = 0;
   };
 
@@ -56,35 +53,33 @@ namespace fiducial_vlam
   class MapperSimpleAverage : public Mapper
   {
   public:
-    MapperSimpleAverage(rclcpp::Node &node, Map &map)
-      : Mapper(node, map)
+    MapperSimpleAverage(std::shared_ptr<Map> &map)
+      : Mapper(map)
     {
     }
 
-    ~MapperSimpleAverage() override = default;
-
     void
-    update_map(const TransformWithCovariance &t_map_camera, Observations &observations,
+    update_map(const TransformWithCovariance &t_map_camera,
+               const Observations &observations,
                FiducialMath &fm) override
     {
       // For all observations estimate the marker location and update the map
-      for (auto observation : observations.observations()) {
+      for (auto &observation : observations.observations()) {
 
-        auto t_camera_marker = fm.solve_t_camera_marker(observation, map().marker_length());
+        auto t_camera_marker = fm.solve_t_camera_marker(observation, map()->marker_length());
         auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
 
         // Update an existing marker or add a new one.
-        auto marker_pair = map().markers().find(observation.id());
-        if (marker_pair != map().markers().end()) {
+        auto marker_pair = map()->markers().find(observation.id());
+        if (marker_pair != map()->markers().end()) {
           auto &marker = marker_pair->second;
           marker.update_simple_average(t_map_marker);
 
         } else {
-          map().markers()[observation.id()] = Marker(observation.id(), t_map_marker);
+          map()->markers()[observation.id()] = Marker(observation.id(), t_map_marker);
         }
       }
     }
-
   };
 
 //=============
@@ -93,10 +88,10 @@ namespace fiducial_vlam
 
   class VmapNode : public rclcpp::Node
   {
-    VmapContext cxt_;
-    Map map_;
-    Localizer localizer_;
-    std::shared_ptr<Mapper> mapper_;
+    VmapContext cxt_{};
+    std::shared_ptr<Map> map_ = std::make_shared<Map>();
+    Localizer localizer_{map_};
+    std::shared_ptr<Mapper> mapper_{};
 
     int callbacks_processed_{0};
 
@@ -114,13 +109,13 @@ namespace fiducial_vlam
   public:
 
     VmapNode()
-      : Node("vmap_node"), cxt_(), map_(*this), localizer_(*this, map_)
+      : Node("vmap_node")
     {
       // Get parameters from the command line
       cxt_.load_parameters(*this);
 
       // construct a map builder.
-      mapper_ = std::make_shared<MapperSimpleAverage>(*this, map_);
+      mapper_ = std::make_shared<MapperSimpleAverage>(map_);
 
       // ROS subscriptions
       observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
@@ -175,7 +170,7 @@ namespace fiducial_vlam
       auto stamp = now();
       tf2_msgs::msg::TFMessage tf_message;
 
-      for (auto &marker_pair: map_.markers()) {
+      for (auto &marker_pair: map_->markers()) {
         auto &marker = marker_pair.second;
         auto mu = marker.t_map_marker().mu();
 
@@ -201,7 +196,7 @@ namespace fiducial_vlam
     visualization_msgs::msg::MarkerArray to_marker_array_msg()
     {
       visualization_msgs::msg::MarkerArray markers;
-      for (auto &marker_pair: map_.markers()) {
+      for (auto &marker_pair: map_->markers()) {
         auto &marker = marker_pair.second;
         visualization_msgs::msg::Marker marker_msg;
         marker_msg.id = marker.id();
@@ -227,7 +222,7 @@ namespace fiducial_vlam
       std_msgs::msg::Header header;
       header.stamp = now();
       header.frame_id = "map";
-      map_pub_->publish(map_.to_map_msg(header, map_.marker_length()));
+      map_pub_->publish(map_->to_map_msg(header, map_->marker_length()));
 
       // Publish the marker Visualization
       if (cxt_.publish_marker_visualizations_) {

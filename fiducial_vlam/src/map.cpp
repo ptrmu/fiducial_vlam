@@ -51,8 +51,7 @@ namespace fiducial_vlam
 // Map class
 //=============
 
-  Map::Map(rclcpp::Node &node)
-    : node_(node)
+  Map::Map()
   {
 
     // Create one entry in the map for now while debugging.
@@ -84,10 +83,9 @@ namespace fiducial_vlam
 //    from_YAML_string(yaml);
   }
 
-  void Map::load_from_msg(const fiducial_vlam_msgs::msg::Map &msg)
+  Map::Map(const fiducial_vlam_msgs::msg::Map &msg)
   {
     marker_length_ = msg.marker_length;
-    markers_.clear();
     for (int i = 0; i < msg.ids.size(); i += 1) {
       Marker marker(msg.ids[i], to_TransformWithCovariance(msg.poses[i]));
       marker.set_is_fixed(msg.fixed_flags[i] != 0);
@@ -182,8 +180,8 @@ namespace fiducial_vlam
 // Localizer class
 //=============
 
-  Localizer::Localizer(rclcpp::Node &node, Map &map)
-    : node_(node), map_(map)
+  Localizer::Localizer(const std::shared_ptr<Map> &map)
+    : map_(map)
   {
   }
 
@@ -197,12 +195,12 @@ namespace fiducial_vlam
     for (auto observation : observations.observations()) {
 
       // Find the marker with the same id
-      auto marker_pair = map_.markers().find(observation.id());
-      if (marker_pair != map_.markers().end()) {
+      auto marker_pair = map_->markers().find(observation.id());
+      if (marker_pair != map_->markers().end()) {
         auto &marker = marker_pair->second;
 
         // Find the camera marker transform
-        auto t_camera_marker = fm.solve_t_camera_marker(observation, map_.marker_length());
+        auto t_camera_marker = fm.solve_t_camera_marker(observation, map_->marker_length());
 
         // The solvePnP function returns the marker in the camera frame: t_camera_marker
         auto tf2_t_marker_camera = t_camera_marker.transform().inverse();
@@ -220,9 +218,6 @@ namespace fiducial_vlam
       }
     }
 
-    RCLCPP_DEBUG(node_.get_logger(), "Camera pose. Averaged from %d observations", observations_count);
-    log_tf_transform(node_, "", average_t_map_camera.transform());
-
     return average_t_map_camera;
   }
 
@@ -230,7 +225,7 @@ namespace fiducial_vlam
 // Utility
 //=============
 
-  void log_tf_transform(rclcpp::Node &node, const std::string s, const tf2::Transform &transform)
+  void log_tf_transform(rclcpp::Node &node, std::string s, const tf2::Transform &transform)
   {
     auto t = transform.getOrigin();
     double r, p, y;
