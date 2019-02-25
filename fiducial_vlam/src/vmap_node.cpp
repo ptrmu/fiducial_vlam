@@ -9,10 +9,6 @@
 #include "map.hpp"
 #include "vmap_context.hpp"
 
-#include "fiducial_vlam_msgs/msg/observations.hpp"
-#include "geometry_msgs/msg/pose_with_covariance.hpp"
-#include "sensor_msgs/msg/camera_info.hpp"
-#include "sensor_msgs/msg/image.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -21,9 +17,9 @@
 namespace fiducial_vlam
 {
 
-//=============
+// ==============================================================================
 // Mapper class
-//=============
+// ==============================================================================
 
   class Mapper
   {
@@ -46,9 +42,9 @@ namespace fiducial_vlam
                FiducialMath &fm) = 0;
   };
 
-//=============
+// ==============================================================================
 // MapperSimpleAverage class
-//=============
+// ==============================================================================
 
   class MapperSimpleAverage : public Mapper
   {
@@ -82,9 +78,9 @@ namespace fiducial_vlam
     }
   };
 
-//=============
+// ==============================================================================
 // VmapNode class
-//=============
+// ==============================================================================
 
   class VmapNode : public rclcpp::Node
   {
@@ -237,9 +233,9 @@ namespace fiducial_vlam
   };
 }
 
-//=============
+// ==============================================================================
 // main()
-//=============
+// ==============================================================================
 
 int main(int argc, char **argv)
 {

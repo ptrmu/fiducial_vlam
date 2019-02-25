@@ -3,21 +3,12 @@
 
 #include <map>
 
-#include "rclcpp/rclcpp.hpp"
-
 #include "convert_util.hpp"
 #include "fiducial_math.hpp"
-#include "marker.hpp"
 #include "observation.hpp"
 #include "transform_with_covariance.hpp"
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
-#include "fiducial_vlam_msgs/msg/observation.hpp"
-#include "fiducial_vlam_msgs/msg/observations.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
-#include "std_msgs/msg/header.hpp"
-#include "tf2/LinearMath/Transform.h"
 
 // coordinate frame conventions
 //  t_destination_source is a transformation from source frame to destination frame
@@ -25,9 +16,64 @@
 
 namespace fiducial_vlam
 {
-//=============
+// ==============================================================================
+// Marker class
+// ==============================================================================
+
+  class Marker
+  {
+    // The id of the marker
+    int id_;
+
+    // The pose of the marker in the map frame
+    TransformWithCovariance t_map_marker_;
+
+    // Prevent modification if true
+    bool is_fixed_{false};
+
+    // Count of updates
+    int update_count_;
+
+  public:
+    Marker() = default;
+
+    Marker(int id, const TransformWithCovariance &t_map_marker)
+      : id_(id), t_map_marker_(t_map_marker), update_count_(1)
+    {}
+
+    auto id() const
+    { return id_; }
+
+    auto is_fixed() const
+    { return is_fixed_; }
+
+    void set_is_fixed(bool is_fixed)
+    { is_fixed_ = is_fixed; }
+
+    auto update_count() const
+    { return update_count_; }
+
+    void set_update_count(int update_count)
+    { update_count_ = update_count; }
+
+    auto &t_map_marker() const
+    { return t_map_marker_; }
+
+    void set_t_map_marker(TransformWithCovariance t_map_marker)
+    { t_map_marker_ = t_map_marker; }
+
+    void update_simple_average(TransformWithCovariance &newVal)
+    {
+      if (!is_fixed_) {
+        t_map_marker_.update_simple_average(newVal, update_count_);
+        update_count_ += 1;
+      }
+    }
+  };
+
+// ==============================================================================
 // Map class
-//=============
+// ==============================================================================
 
   class Map
   {
@@ -56,9 +102,9 @@ namespace fiducial_vlam
     void save_to_file(std::string full_path);
   };
 
-//=============
+// ==============================================================================
 // Localizer class
-//=============
+// ==============================================================================
 
   class Localizer
   {
@@ -70,11 +116,11 @@ namespace fiducial_vlam
     TransformWithCovariance average_t_map_camera(Observations &observations, FiducialMath &fm);
   };
 
-//=============
+// ==============================================================================
 // Utility
-//=============
+// ==============================================================================
 
-  void log_tf_transform(rclcpp::Node &node, std::string s, const tf2::Transform &transform);
+//  void log_tf_transform(rclcpp::Node &node, std::string s, const tf2::Transform &transform);
 
 } // namespace fiducial_vlam
 

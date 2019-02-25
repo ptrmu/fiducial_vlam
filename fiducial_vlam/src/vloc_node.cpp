@@ -6,22 +6,15 @@
 #include "vloc_context.hpp"
 
 #include "cv_bridge/cv_bridge.h"
-#include "fiducial_vlam_msgs/msg/map.hpp"
-#include "fiducial_vlam_msgs/msg/observations.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
-#include "sensor_msgs/msg/camera_info.hpp"
-#include "sensor_msgs/msg/image.hpp"
-#include "std_msgs/msg/header.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 
 namespace fiducial_vlam
 {
 
-//=============
+// ==============================================================================
 // VlocNode class
-//=============
+// ==============================================================================
 
   class VlocNode : public rclcpp::Node
   {
@@ -151,7 +144,7 @@ namespace fiducial_vlam
             // Find this marker in the map
             auto marker_pair = map_->markers().find(obs.id());
             if (marker_pair != map_->markers().end()) {
-              auto &tf_t_map_marker = marker_pair->second.marker_pose_f_map().transform();
+              auto &tf_t_map_marker = marker_pair->second.t_map_marker().transform();
 
               // Found a marker that is in the map and in the image. Calculate its
               // transform to the camera frame and annotate the image.
@@ -183,9 +176,9 @@ namespace fiducial_vlam
   };
 }
 
-//=============
+// ==============================================================================
 // main()
-//=============
+// ==============================================================================
 
 int main(int argc, char **argv)
 {

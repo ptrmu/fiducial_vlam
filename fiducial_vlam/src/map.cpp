@@ -1,18 +1,14 @@
 
 #include "map.hpp"
 
-#include "convert_util.hpp"
-
-#include "tf2/LinearMath/Transform.h"
-#include "tf2/LinearMath/Quaternion.h"
 #include "yaml-cpp/yaml.h"
 
 
 namespace fiducial_vlam
 {
-//=============
+// ==============================================================================
 // Observations class
-//=============
+// ==============================================================================
 
   Observations::Observations(const fiducial_vlam_msgs::msg::Observations &msg)
   {
@@ -47,9 +43,9 @@ namespace fiducial_vlam
     return msg;
   }
 
-//=============
+// ==============================================================================
 // Map class
-//=============
+// ==============================================================================
 
   Map::Map()
   {
@@ -99,7 +95,7 @@ namespace fiducial_vlam
     for (auto &marker_pair : markers_) {
       auto &marker = marker_pair.second;
       map_msg.ids.emplace_back(marker.id());
-      map_msg.poses.emplace_back(to_PoseWithCovariance_msg(marker.marker_pose_f_map()));
+      map_msg.poses.emplace_back(to_PoseWithCovariance_msg(marker.t_map_marker()));
       map_msg.fixed_flags.emplace_back(marker.is_fixed() ? 1 : 0);
     }
     map_msg.header = header_msg;
@@ -176,9 +172,9 @@ namespace fiducial_vlam
   {
   }
 
-//=============
+// ==============================================================================
 // Localizer class
-//=============
+// ==============================================================================
 
   Localizer::Localizer(const std::shared_ptr<Map> &map)
     : map_(map)
@@ -221,19 +217,19 @@ namespace fiducial_vlam
     return average_t_map_camera;
   }
 
-//=============
+// ==============================================================================
 // Utility
-//=============
+// ==============================================================================
 
-  void log_tf_transform(rclcpp::Node &node, std::string s, const tf2::Transform &transform)
-  {
-    auto t = transform.getOrigin();
-    double r, p, y;
-    transform.getBasis().getRPY(r, p, y);
-
-    RCLCPP_DEBUG(node.get_logger(), "%s xyz:%lf %lf %lf, rpy:%lf %lf %lf",
-                 s.c_str(), t.x(), t.y(), t.z(), r, p, y);
-  }
+//  void log_tf_transform(rclcpp::Node &node, std::string s, const tf2::Transform &transform)
+//  {
+//    auto t = transform.getOrigin();
+//    double r, p, y;
+//    transform.getBasis().getRPY(r, p, y);
+//
+//    RCLCPP_DEBUG(node.get_logger(), "%s xyz:%lf %lf %lf, rpy:%lf %lf %lf",
+//                 s.c_str(), t.x(), t.y(), t.z(), r, p, y);
+//  }
 
 
 }
