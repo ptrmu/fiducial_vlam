@@ -3,6 +3,7 @@
 
 #include "convert_util.hpp"
 
+// todo remove this
 //#include "opencv2/calib3d.hpp"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2/LinearMath/Quaternion.h"
@@ -71,19 +72,23 @@ namespace fiducial_vlam
 // Observations class
 //=============
 
-  Observations::Observations(const std::vector<int> &ids, const std::vector<std::vector<cv::Point2f>> &corners)
-  {
-    assert(ids.size() == corners.size());
-    for (int i = 0; i < ids.size(); i += 1) {
-      observations_.emplace_back(Observation(ids[i], corners[i]));
-    }
-  }
+// todo remove this
+//  Observations::Observations(const std::vector<int> &ids, const std::vector<std::vector<cv::Point2f>> &corners)
+//  {
+//    assert(ids.size() == corners.size());
+//    for (int i = 0; i < ids.size(); i += 1) {
+//      observations_.emplace_back(Observation(ids[i], corners[i]));
+//    }
+//  }
 
   Observations::Observations(const fiducial_vlam_msgs::msg::Observations &msg)
   {
-    for (auto o : msg.observations) {
-
-      observations_.emplace_back(Observation(o));
+    for (auto &obs : msg.observations) {
+      observations_.emplace_back(Observation(obs.id,
+                                             obs.x0, obs.y0,
+                                             obs.x1, obs.y1,
+                                             obs.x2, obs.y2,
+                                             obs.x3, obs.y3));
     }
   }
 
@@ -96,14 +101,14 @@ namespace fiducial_vlam
     for (auto observation : observations_) {
       fiducial_vlam_msgs::msg::Observation obs_msg;
       obs_msg.id = observation.id();
-      obs_msg.x0 = observation.corners_f_image()[0].x;
-      obs_msg.x1 = observation.corners_f_image()[1].x;
-      obs_msg.x2 = observation.corners_f_image()[2].x;
-      obs_msg.x3 = observation.corners_f_image()[3].x;
-      obs_msg.y0 = observation.corners_f_image()[0].y;
-      obs_msg.y1 = observation.corners_f_image()[1].y;
-      obs_msg.y2 = observation.corners_f_image()[2].y;
-      obs_msg.y3 = observation.corners_f_image()[3].y;
+      obs_msg.x0 = observation.x0();
+      obs_msg.x1 = observation.x1();
+      obs_msg.x2 = observation.x2();
+      obs_msg.x3 = observation.x3();
+      obs_msg.y0 = observation.y0();
+      obs_msg.y1 = observation.y1();
+      obs_msg.y2 = observation.y2();
+      obs_msg.y3 = observation.y3();
       msg.observations.emplace_back(obs_msg);
     }
     return msg;
@@ -113,39 +118,40 @@ namespace fiducial_vlam
 // Marker class
 //=============
 
-  std::vector<cv::Point3d> Marker::corners_f_map(float marker_length)
-  {
-    // Build up a list of the corner locations in the map frame.
-    tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
-    tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
-    tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
-    tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
-
-    auto t_map_marker_tf = t_map_marker().transform();
-    auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
-    auto corner1_f_map = t_map_marker_tf * corner1_f_marker;
-    auto corner2_f_map = t_map_marker_tf * corner2_f_marker;
-    auto corner3_f_map = t_map_marker_tf * corner3_f_marker;
-
-    std::vector<cv::Point3d> corners_f_map;
-    corners_f_map.emplace_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
-    corners_f_map.emplace_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
-    corners_f_map.emplace_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
-    corners_f_map.emplace_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
-
-    return corners_f_map;
-  }
-
-  std::vector<cv::Point3d> Marker::corners_f_marker(float marker_length)
-  {
-    // Build up a list of the corner locations in the map frame.
-    std::vector<cv::Point3d> corners_f_marker;
-    corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
-    corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
-    corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
-    corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
-    return corners_f_marker;
-  }
+// todo remove this
+//  std::vector<cv::Point3d> Marker::corners_f_map(float marker_length)
+//  {
+//    // Build up a list of the corner locations in the map frame.
+//    tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
+//    tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
+//    tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
+//    tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
+//
+//    auto t_map_marker_tf = t_map_marker().transform();
+//    auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
+//    auto corner1_f_map = t_map_marker_tf * corner1_f_marker;
+//    auto corner2_f_map = t_map_marker_tf * corner2_f_marker;
+//    auto corner3_f_map = t_map_marker_tf * corner3_f_marker;
+//
+//    std::vector<cv::Point3d> corners_f_map;
+//    corners_f_map.emplace_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
+//    corners_f_map.emplace_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
+//    corners_f_map.emplace_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
+//    corners_f_map.emplace_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
+//
+//    return corners_f_map;
+//  }
+//
+//  std::vector<cv::Point3d> Marker::corners_f_marker(float marker_length)
+//  {
+//    // Build up a list of the corner locations in the map frame.
+//    std::vector<cv::Point3d> corners_f_marker;
+//    corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
+//    corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
+//    corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
+//    corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
+//    return corners_f_marker;
+//  }
 
 //=============
 // Map class

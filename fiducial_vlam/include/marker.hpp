@@ -3,7 +3,8 @@
 
 #include "transform_with_covariance.hpp"
 
-#include "opencv2/calib3d.hpp" // remove this when finished refactoring
+// todo remove this
+//#include "opencv2/calib3d.hpp" // remove this when finished refactoring
 
 namespace fiducial_vlam
 {
@@ -53,12 +54,13 @@ namespace fiducial_vlam
     auto &t_map_marker() const
     { return t_map_marker_; }
 
+    //todo remove this
     // Return the 3D coordinate cv::Point3d vectors of the marker corners in the map frame.
     // These corners need to be in the same order as the corners returned
     // from cv::aruco::detectMarkers()
-    std::vector <cv::Point3d> corners_f_map(float marker_length);
-
-    static std::vector <cv::Point3d> corners_f_marker(float marker_length);
+//    std::vector <cv::Point3d> corners_f_map(float marker_length);
+//
+//    static std::vector <cv::Point3d> corners_f_marker(float marker_length);
 
     void update_simple_average(TransformWithCovariance &newVal)
     {

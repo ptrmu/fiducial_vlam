@@ -79,7 +79,7 @@ namespace fiducial_vlam
     {
       // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
       std::vector<cv::Point3d> all_corners_f_marker = corners_f_marker(marker_length);
-      std::vector<cv::Point2f> all_corners_f_image = observation.corners_f_image();
+      std::vector<cv::Point2f> all_corners_f_image = corners_f_image(observation);
 
       // Figure out image location.
       cv::Vec3d rvec, tvec;
@@ -109,7 +109,8 @@ namespace fiducial_vlam
       std::vector<std::vector<cv::Point2f>> corners;
       cv::aruco::detectMarkers(gray, dictionary, corners, ids, detectorParameters);
 
-      return Observations(ids, corners);
+      // return the corners as a list of observations
+      return to_observations(ids, corners);
     }
 
     void annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color, const TransformWithCovariance &t_camera_marker)
@@ -156,6 +157,28 @@ namespace fiducial_vlam
       corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
       corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
       return corners_f_marker;
+    }
+
+    std::vector<cv::Point2f> corners_f_image(const Observation &observation)
+    {
+      return std::vector<cv::Point2f>{
+        cv::Point2f(observation.x0(), observation.y0()),
+        cv::Point2f(observation.x1(), observation.y1()),
+        cv::Point2f(observation.x2(), observation.y2()),
+        cv::Point2f(observation.x3(), observation.y3())};
+    };
+
+    Observations to_observations(const std::vector<int> &ids, const std::vector<std::vector<cv::Point2f>> &corners)
+    {
+      Observations observations;
+      for (int i = 0; i < ids.size(); i += 1) {
+        observations.observations().emplace_back(Observation(ids[i],
+                                                             corners[i][0].x, corners[i][0].y,
+                                                             corners[i][1].x, corners[i][1].y,
+                                                             corners[i][2].x, corners[i][2].y,
+                                                             corners[i][3].x, corners[i][3].y));
+      }
+      return observations;
     }
 
     tf2::Transform to_tf2_transform(const cv::Vec3d &rvec, const cv::Vec3d &tvec)
