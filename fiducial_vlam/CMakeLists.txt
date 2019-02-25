@@ -67,7 +67,7 @@ add_executable(vloc_node
   src/convert_util.cpp
   src/transform_with_covariance.cpp
   src/fiducial_math.cpp
-  )
+  src/vloc_context.cpp)
 
 ament_target_dependencies(vloc_node
   cv_bridge

@@ -5,9 +5,9 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include "fiducial_math.hpp"
 #include "map.hpp"
 #include "vmap_context.hpp"
-#include "fiducial_math.hpp"
 
 #include "fiducial_vlam_msgs/msg/observations.hpp"
 #include "geometry_msgs/msg/pose_with_covariance.hpp"
@@ -16,7 +16,6 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
-
 
 
 namespace fiducial_vlam
@@ -37,8 +36,7 @@ namespace fiducial_vlam
     {
     }
 
-    virtual ~Mapper()
-    {}
+    virtual ~Mapper() = default;
 
     auto &node() const
     { return node_; }
@@ -63,12 +61,11 @@ namespace fiducial_vlam
     {
     }
 
-    virtual ~MapperSimpleAverage()
-    {}
+    ~MapperSimpleAverage() override = default;
 
-    virtual void
+    void
     update_map(const TransformWithCovariance &t_map_camera, Observations &observations,
-               FiducialMath &fm)
+               FiducialMath &fm) override
     {
       // For all observations estimate the marker location and update the map
       for (auto observation : observations.observations()) {
@@ -119,10 +116,11 @@ namespace fiducial_vlam
     VmapNode()
       : Node("vmap_node"), cxt_(), map_(*this), localizer_(*this, map_)
     {
-      mapper_ = std::make_shared<MapperSimpleAverage>(*this, map_);
-
       // Get parameters from the command line
       cxt_.load_parameters(*this);
+
+      // construct a map builder.
+      mapper_ = std::make_shared<MapperSimpleAverage>(*this, map_);
 
       // ROS subscriptions
       observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
@@ -209,8 +207,8 @@ namespace fiducial_vlam
         marker_msg.id = marker.id();
         marker_msg.header.frame_id = "map";
         marker_msg.pose = to_Pose_msg(marker.t_map_marker());
-        marker_msg.type = marker_msg.CUBE;
-        marker_msg.action = marker_msg.ADD;
+        marker_msg.type = visualization_msgs::msg::Marker::CUBE;
+        marker_msg.action = visualization_msgs::msg::Marker::ADD;
         marker_msg.scale.x = 0.1;
         marker_msg.scale.y = 0.1;
         marker_msg.scale.z = 0.01;
@@ -236,7 +234,7 @@ namespace fiducial_vlam
         fiducial_markers_pub_->publish(to_marker_array_msg());
       }
 
-      // Publish the TFtree
+      // Publish the transform tree
       if (cxt_.publish_marker_tfs_) {
         tf_message_pub_->publish(to_tf_message());
       }
@@ -251,7 +249,7 @@ namespace fiducial_vlam
 int main(int argc, char **argv)
 {
   // Force flush of the stdout buffer
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   // Init ROS
   rclcpp::init(argc, argv);

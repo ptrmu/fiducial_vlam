@@ -41,6 +41,7 @@ namespace fiducial_vlam
     return TransformWithCovariance(tf);
   }
 
+#if 0
   // todo remove when finished refactor
   tf2::Transform to_tf2_transform(const cv::Vec3d &rvec, const cv::Vec3d &tvec)
   {
@@ -90,5 +91,6 @@ namespace fiducial_vlam
     dist_coeffs.at<double>(3) = msg.d[3];
     dist_coeffs.at<double>(4) = msg.d[4];
   }
+#endif
 }
 

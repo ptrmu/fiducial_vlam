@@ -3,35 +3,59 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include "context_macros.hpp"
+#include "transform_with_covariance.hpp"
+
 namespace fiducial_vlam
 {
+
+#define CXT_MACRO_ALL_PARAMS \
+  CXT_ELEM(marker_map_full_filename, /* name of the file to store the marker map in  */ \
+  "", std::string) \
+  CXT_ELEM(make_not_use_map, /* non-zero => create a new map  */ \
+  1, int) \
+  CXT_ELEM(map_init_style, /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
+  1, int) \
+  CXT_ELEM(map_init_id, /* marker id for map initialization */ \
+  1, int) \
+  CXT_ELEM(map_init_pose_x, /* pose component for map initialization */ \
+  0., double) \
+  CXT_ELEM(map_init_pose_y, /* pose component for map initialization */ \
+  0., double) \
+  CXT_ELEM(map_init_pose_z, /* pose component for map initialization */ \
+  0., double) \
+  CXT_ELEM(map_init_pose_roll, /* pose component for map initialization */ \
+  0., double) \
+  CXT_ELEM(map_init_pose_pitch, /* pose component for map initialization */ \
+  0., double) \
+  CXT_ELEM(map_init_pose_yaw, /* pose component for map initialization */ \
+  0., double) \
+  CXT_ELEM(marker_map_publish_frequency_hz, /* Hz => rate at which the marker map is published */ \
+  0., double) \
+  CXT_ELEM(publish_marker_tfs, /* non-zero => publish the tf of all the known markers  */ \
+  1, int) \
+  CXT_ELEM(publish_marker_visualizations, /* non-zero => publish a shape that represents a marker  */ \
+  1, int) \
+  /* End of list */
+
+#define CXT_MACRO_ALL_MEMBERS \
+  CXT_MEMBER(map_init_transform,  /* A transform derived from individual parameters */ \
+  TransformWithCovariance) \
+  /* End of list */
+
   struct VmapContext
   {
-    // map parameters
-    std::string marker_map_full_filename_;  // name of the file to store the marker map in.
+#undef CXT_ELEM
+#define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
+    CXT_MACRO_ALL_PARAMS
 
-    // map creation parameters
-    int make_not_use_map_ = 1; // non-zero => create a new map
-
-    // 0->marker id, marker pose from file
-    // 1->marker id, marker pose as parameter
-    // 2->camera pose as parameter
-    int map_init_style_;
-    int map_init_id_;
-    double map_init_pose_x_;
-    double map_init_pose_y_;
-    double map_init_pose_z_;
-    double map_init_pose_r_;
-    double map_init_pose_p_;
-    double map_init_pose_yaw_;
-
-    double marker_map_publish_frequency_hz_ = 30. / 60.;  // Hz => rate at which the marker map is published
-
-    // visualization publishing parameters
-    int publish_marker_tfs_ = 1;  // non-zero => publish the tf of all the known markers
-    int publish_marker_visualizations_ = 1;  // non-zero => publish a shape that represents the marker
+#undef CXT_MEMBER
+#define CXT_MEMBER(n, a...) CXT_MEMBER_FIELD_DEF(n, a)
+    CXT_MACRO_ALL_MEMBERS
 
     void load_parameters(rclcpp::Node &node);
+
+    void validate_parameters();
   };
 }
 

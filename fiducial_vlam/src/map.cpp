@@ -3,7 +3,7 @@
 
 #include "convert_util.hpp"
 
-#include "opencv2/calib3d.hpp"
+//#include "opencv2/calib3d.hpp"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "yaml-cpp/yaml.h"
@@ -326,6 +326,7 @@ namespace fiducial_vlam
     return average_t_map_camera;
   }
 
+#if 0
 // This routine does not seem to work. The average version is being used. Maybe someday
 // this can be debugged.
   TransformWithCovariance Localizer::estimate_camera_pose_f_map(Observations &observations,
@@ -473,6 +474,7 @@ namespace fiducial_vlam
       }
     }
   }
+#endif
 
 //=============
 // Utility

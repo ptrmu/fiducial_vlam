@@ -3,6 +3,7 @@
 
 #include "fiducial_math.hpp"
 #include "map.hpp"
+#include "vloc_context.hpp"
 
 #include "cv_bridge/cv_bridge.h"
 #include "fiducial_vlam_msgs/msg/map.hpp"
@@ -11,9 +12,9 @@
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "std_msgs/msg/header.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
-#include "std_msgs/msg/header.hpp"
 
 namespace fiducial_vlam
 {
@@ -24,6 +25,7 @@ namespace fiducial_vlam
 
   class VlocNode : public rclcpp::Node
   {
+    VlocContext cxt_;
     Map map_;
     CameraInfo camera_info_;
     Localizer localizer_;
@@ -45,8 +47,11 @@ namespace fiducial_vlam
 
   public:
     VlocNode()
-      : Node("vloc_node"), map_(*this), camera_info_(), localizer_(*this, map_)
+      : Node("vloc_node"), cxt_(), map_(*this), camera_info_(), localizer_(*this, map_)
     {
+      // Get parameters from the command line
+      cxt_.load_parameters(*this);
+
       // ROS subscriptions
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         "camera_info",
@@ -56,8 +61,6 @@ namespace fiducial_vlam
             // Save the info message because we pass it along with the observations.
             camera_info_msg_ = *msg;
             camera_info_ = CameraInfo(*msg);
-
-            RCLCPP_INFO(this->get_logger(), "have camera info");
           }
         },
         16);
@@ -122,8 +125,9 @@ namespace fiducial_vlam
 
         // Also publish the camera's tf
         // todo: give the tf a name based on the camera id.
-        // todo: allow this to be turned on and off.
-        publish_camera_tf(t_map_camera);
+        if (cxt_.publish_camera_tf_) {
+          publish_camera_tf(t_map_camera);
+        }
       }
 
       // Publish the observations
@@ -161,7 +165,7 @@ namespace fiducial_vlam
       }
     }
 
-    void publish_camera_tf(const TransformWithCovariance & t_map_camera)
+    void publish_camera_tf(const TransformWithCovariance &t_map_camera)
     {
       auto stamp = now();
       tf2_msgs::msg::TFMessage tf_message;
@@ -185,7 +189,7 @@ namespace fiducial_vlam
 int main(int argc, char **argv)
 {
   // Force flush of the stdout buffer
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   // Init ROS
   rclcpp::init(argc, argv);
