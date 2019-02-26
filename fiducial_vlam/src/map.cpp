@@ -147,7 +147,7 @@ namespace fiducial_vlam
 //  {
 //    out << YAML::BeginMap;
 //    to_YAML_header(map, out);
-//    to_YAML_markers(map.const_markers(), out);
+//    to_YAML_markers(map.markers(), out);
 //    out << YAML::EndMap;
 //  }
 //

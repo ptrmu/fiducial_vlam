@@ -50,7 +50,7 @@ namespace fiducial_vlam
     void to_markers()
     {
       out_ << YAML::Key << "markers" << YAML::Value << YAML::BeginSeq;
-      for (auto &marker_pair : map_.const_markers()) {
+      for (auto &marker_pair : map_.markers()) {
         auto &marker = marker_pair.second;
         to_marker(marker);
       }
@@ -345,7 +345,7 @@ namespace fiducial_vlam
       auto stamp = now();
       tf2_msgs::msg::TFMessage tf_message;
 
-      for (auto &marker_pair: map_->const_markers()) {
+      for (auto &marker_pair: map_->markers()) {
         auto &marker = marker_pair.second;
         auto mu = marker.t_map_marker().mu();
 
@@ -371,7 +371,7 @@ namespace fiducial_vlam
     visualization_msgs::msg::MarkerArray to_marker_array_msg()
     {
       visualization_msgs::msg::MarkerArray markers;
-      for (auto &marker_pair: map_->const_markers()) {
+      for (auto &marker_pair: map_->markers()) {
         auto &marker = marker_pair.second;
         visualization_msgs::msg::Marker marker_msg;
         marker_msg.id = marker.id();

@@ -77,10 +77,7 @@ namespace fiducial_vlam
 
     explicit Map(const fiducial_vlam_msgs::msg::Map &msg);
 
-    auto &markers()
-    { return markers_; }
-
-    const auto &const_markers() const
+    const auto &markers() const
     { return markers_; }
 
     const auto marker_length() const
