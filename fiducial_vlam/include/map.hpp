@@ -61,14 +61,6 @@ namespace fiducial_vlam
 
     void set_t_map_marker(TransformWithCovariance t_map_marker)
     { t_map_marker_ = t_map_marker; }
-
-    void update_simple_average(TransformWithCovariance &newVal)
-    {
-      if (!is_fixed_) {
-        t_map_marker_.update_simple_average(newVal, update_count_);
-        update_count_ += 1;
-      }
-    }
   };
 
 // ==============================================================================

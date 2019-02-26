@@ -26,10 +26,12 @@ namespace fiducial_vlam
     std::shared_ptr<Map> &map_;
 
   public:
-    Mapper(std::shared_ptr<Map> &map)
+    explicit Mapper(std::shared_ptr<Map> &map)
       : map_(map)
     {
     }
+
+    Mapper() = delete;
 
     virtual ~Mapper() = default;
 
@@ -49,7 +51,7 @@ namespace fiducial_vlam
   class MapperSimpleAverage : public Mapper
   {
   public:
-    MapperSimpleAverage(std::shared_ptr<Map> &map)
+    explicit MapperSimpleAverage(std::shared_ptr<Map> &map)
       : Mapper(map)
     {
     }
@@ -66,14 +68,25 @@ namespace fiducial_vlam
         auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
 
         // Update an existing marker or add a new one.
-        auto marker_pair = map()->markers().find(observation.id());
-        if (marker_pair != map()->markers().end()) {
-          auto &marker = marker_pair->second;
-          marker.update_simple_average(t_map_marker);
+        auto iter = map()->markers().find(observation.id());
+        if (iter != map()->markers().end()) {
+          auto &marker = iter->second;
+          update_marker_simple_average(marker, t_map_marker);
 
         } else {
           map()->markers()[observation.id()] = Marker(observation.id(), t_map_marker);
         }
+      }
+    }
+
+    void update_marker_simple_average(Marker &existing, const TransformWithCovariance &another_twc)
+    {
+      if (!existing.is_fixed()) {
+        auto t_map_marker = existing.t_map_marker();  // Make a copy
+        auto update_count = existing.update_count();
+        t_map_marker.update_simple_average(another_twc, update_count);
+        existing.set_t_map_marker(t_map_marker);
+        existing.set_update_count(update_count+1);
       }
     }
   };
