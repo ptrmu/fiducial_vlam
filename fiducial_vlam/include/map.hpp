@@ -80,18 +80,21 @@ namespace fiducial_vlam
     auto &markers()
     { return markers_; }
 
-    auto marker_length() const
+    const auto &const_markers() const
+    { return markers_; }
+
+    const auto marker_length() const
     { return marker_length_; }
 
-    fiducial_vlam_msgs::msg::Map to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length);
+    void set_marker_length(int marker_length)
+    { marker_length_ = marker_length; }
 
-    void to_YAML_string(std::string &yaml);
+    Marker * find_marker(int id);
 
-    void from_YAML_string(std::string &yaml);
+    void add_marker(int id, Marker marker);
 
-    void load_from_file(std::string full_path);
-
-    void save_to_file(std::string full_path);
+    std::unique_ptr<fiducial_vlam_msgs::msg::Map>
+    to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length);
   };
 
 // ==============================================================================

@@ -89,7 +89,7 @@ namespace fiducial_vlam
 
     explicit Observations(const fiducial_vlam_msgs::msg::Observations &msg);
 
-    auto &observations() const
+    const auto &observations() const
     { return observations_; }
 
     auto size() const

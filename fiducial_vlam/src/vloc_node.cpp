@@ -142,9 +142,9 @@ namespace fiducial_vlam
           for (auto &obs : observations.observations()) {
 
             // Find this marker in the map
-            auto marker_pair = map_->markers().find(obs.id());
-            if (marker_pair != map_->markers().end()) {
-              auto &tf_t_map_marker = marker_pair->second.t_map_marker().transform();
+            auto marker_ptr = map_->find_marker(obs.id());
+            if (marker_ptr) {
+              auto &tf_t_map_marker = marker_ptr->t_map_marker().transform();
 
               // Found a marker that is in the map and in the image. Calculate its
               // transform to the camera frame and annotate the image.

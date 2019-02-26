@@ -12,10 +12,173 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
-
+#include "yaml-cpp/yaml.h"
 
 namespace fiducial_vlam
 {
+// ==============================================================================
+// ToYAML class
+// ==============================================================================
+
+  class ToYAML
+  {
+    const Map &map_;
+    YAML::Emitter out_;
+
+
+    void to_header()
+    {
+      out_ << YAML::Key << "marker_length" << YAML::Value << map_.marker_length();
+    }
+
+    void to_marker(const Marker &marker)
+    {
+      out_ << YAML::BeginMap;
+      out_ << YAML::Key << "id" << YAML::Value << marker.id();
+      out_ << YAML::Key << "u" << YAML::Value << marker.update_count();
+      out_ << YAML::Key << "f" << YAML::Value << (marker.is_fixed() ? 1 : 0);
+      auto &c = marker.t_map_marker().transform().getOrigin();
+      out_ << YAML::Key << "t" << YAML::Value << YAML::Flow << YAML::BeginSeq << c.x() << c.y() << c.z()
+           << YAML::EndSeq;
+      tf2::Quaternion q;
+      marker.t_map_marker().transform().getBasis().getRotation(q);
+      out_ << YAML::Key << "q" << YAML::Value << YAML::Flow << YAML::BeginSeq << q.x() << q.y() << q.z() << q.w()
+           << YAML::EndSeq;
+      out_ << YAML::EndMap;
+    }
+
+    void to_markers()
+    {
+      out_ << YAML::Key << "markers" << YAML::Value << YAML::BeginSeq;
+      for (auto &marker_pair : map_.const_markers()) {
+        auto &marker = marker_pair.second;
+        to_marker(marker);
+      }
+      out_ << YAML::EndSeq;
+    }
+
+    void to_YAML_map()
+    {
+      out_ << YAML::BeginMap;
+      to_header();
+      to_markers();
+      out_ << YAML::EndMap;
+    }
+
+  public:
+    ToYAML(const Map &map)
+      : map_(map), out_()
+    {}
+
+    std::unique_ptr<std::string> to_YAML()
+    {
+      to_YAML_map();
+      return std::make_unique<std::string>(out_.c_str());
+    }
+  };
+
+// ==============================================================================
+// FromYAML class
+// ==============================================================================
+
+  class FromYAML
+  {
+    YAML::Node map_node_;
+    std::unique_ptr<Map> map_unique_ = std::make_unique<Map>();
+    Map &map_ = *map_unique_;
+
+    bool from_marker(YAML::Node &marker_node)
+    {
+      auto id_node = marker_node["id"];
+      if (!id_node.IsScalar()) {
+        return yaml_error("marker.id failed IsScalar()");
+      }
+      auto update_count_node = marker_node["u"];
+      if (!update_count_node.IsScalar()) {
+        return yaml_error("marker.update_count failed IsScalar()");
+      }
+      auto is_fixed_node = marker_node["f"];
+      if (!is_fixed_node.IsScalar()) {
+        return yaml_error("marker.is_fixed failed IsScalar()");
+      }
+      auto t_node = marker_node["t"];
+      if (!t_node.IsSequence()) {
+        return yaml_error("marker.t failed IsSequence()");
+      }
+      auto q_node = marker_node["q"];
+      if (!q_node.IsSequence()) {
+        return yaml_error("marker.q failed IsSequence()");
+      }
+
+//      auto id = marker_node["id"].as<int>();
+//      auto update_count = marker_node["u"].as<int>();
+//      auto is_fixed = marker_node["f"].as<int>();
+//      auto t_node = marker_node["t"].as<YAML::Node>();
+//      tf2::tf2Vector4 t(t_node[0].as<double>(), t_node[1].as<double>(), t_node[2].as<double>(), 0.0);
+//      tf2::Quaternion q;
+//      auto q_node = marker_node["q"].as<YAML::Node>();
+//      q.setX(q_node[0].as<double>());
+//      q.setY(q_node[1].as<double>());
+//      q.setZ(q_node[2].as<double>());
+//      q.setW(q_node[3].as<double>());
+//
+//      Marker marker(id, TransformWithCovariance(tf2::Transform(q, t)));
+//      marker.set_is_fixed(is_fixed);
+//      marker.set_update_count(update_count);
+      //markers_[id] = marker;
+      return false;
+    }
+
+    bool from_markers(YAML::Node &markers_node)
+    {
+      for (YAML::const_iterator it = markers_node.begin(); it != markers_node.end(); ++it) {
+        YAML::Node marker_node = *it;
+        if (marker_node.IsMap()) {
+          if (from_marker(marker_node)) {
+            continue;
+          }
+          return false;
+        }
+        return yaml_error("marker failed IsMap()");
+      }
+      return true;
+    }
+
+    bool from_map()
+    {
+      if (map_node_.IsMap()) {
+        auto marker_length_node = map_node_["marker_length"];
+        if (marker_length_node.IsScalar()) {
+          map_.set_marker_length(marker_length_node.as<int>());
+          auto markers_node = map_node_["markers"];
+          if (markers_node.IsSequence()) {
+            return from_markers(markers_node);
+          }
+          return yaml_error("markers failed IsSequence()");
+        }
+        return yaml_error("marker_length failed IsScalar()");
+      }
+      return yaml_error("root failed IsMap()");
+    }
+
+    bool yaml_error(const std::string s)
+    {
+      return false;
+    }
+
+  public:
+    FromYAML(const std::string &yaml)
+      : map_node_(YAML::Load(yaml))
+    {}
+
+    std::unique_ptr<Map> from_YAML()
+    {
+      if (!from_map()) {
+        map_unique_.release();
+      }
+      return std::move(map_unique_);
+    }
+  };
 
 // ==============================================================================
 // Mapper class
@@ -68,13 +231,13 @@ namespace fiducial_vlam
         auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
 
         // Update an existing marker or add a new one.
-        auto iter = map()->markers().find(observation.id());
-        if (iter != map()->markers().end()) {
-          auto &marker = iter->second;
+        auto marker_ptr = map()->find_marker(observation.id());
+        if (marker_ptr) {
+          auto &marker = *marker_ptr;
           update_marker_simple_average(marker, t_map_marker);
 
         } else {
-          map()->markers()[observation.id()] = Marker(observation.id(), t_map_marker);
+          map()->add_marker(observation.id(), Marker(observation.id(), t_map_marker));
         }
       }
     }
@@ -122,6 +285,9 @@ namespace fiducial_vlam
     {
       // Get parameters from the command line
       cxt_.load_parameters(*this);
+
+//      auto s = to_YAML(*map_);
+//      auto m = from_YAML(*s);
 
       // construct a map builder.
       mapper_ = std::make_shared<MapperSimpleAverage>(map_);
@@ -179,7 +345,7 @@ namespace fiducial_vlam
       auto stamp = now();
       tf2_msgs::msg::TFMessage tf_message;
 
-      for (auto &marker_pair: map_->markers()) {
+      for (auto &marker_pair: map_->const_markers()) {
         auto &marker = marker_pair.second;
         auto mu = marker.t_map_marker().mu();
 
@@ -205,7 +371,7 @@ namespace fiducial_vlam
     visualization_msgs::msg::MarkerArray to_marker_array_msg()
     {
       visualization_msgs::msg::MarkerArray markers;
-      for (auto &marker_pair: map_->markers()) {
+      for (auto &marker_pair: map_->const_markers()) {
         auto &marker = marker_pair.second;
         visualization_msgs::msg::Marker marker_msg;
         marker_msg.id = marker.id();
@@ -231,7 +397,7 @@ namespace fiducial_vlam
       std_msgs::msg::Header header;
       header.stamp = now();
       header.frame_id = "map";
-      map_pub_->publish(map_->to_map_msg(header, map_->marker_length()));
+      map_pub_->publish(*map_->to_map_msg(header, map_->marker_length()));
 
       // Publish the marker Visualization
       if (cxt_.publish_marker_visualizations_) {
@@ -242,6 +408,52 @@ namespace fiducial_vlam
       if (cxt_.publish_marker_tfs_) {
         tf_message_pub_->publish(to_tf_message());
       }
+    }
+
+    std::unique_ptr<std::string> to_YAML(const Map &map)
+    {
+      ToYAML to_YAML{map};
+      return to_YAML.to_YAML();
+    }
+
+    std::unique_ptr<Map> from_YAML(std::string &yaml)
+    {
+      FromYAML from_YAML(yaml);
+      auto map_unique = from_YAML.from_YAML();
+      if (!map_unique) {
+        // An error occurred. Sometime get the string that describes the error
+        // and do something with it.
+      }
+#if 0
+      if (node.IsMap()) {
+      marker_length_ = node["marker_length"].as<double>();
+      YAML::Node markers_node = node["markers"].as<YAML::Node>();
+      if (markers_node.IsSequence()) {
+        markers_.clear(); // clear out the member map of markers.
+        for (YAML::const_iterator it = markers_node.begin(); it != markers_node.end(); ++it) {
+          YAML::Node marker_node = *it;
+          if (marker_node.IsMap()) {
+            auto id = marker_node["id"].as<int>();
+            auto update_count = marker_node["u"].as<int>();
+            auto is_fixed = marker_node["f"].as<int>();
+            auto t_node = marker_node["t"].as<YAML::Node>();
+            tf2::tf2Vector4 t(t_node[0].as<double>(), t_node[1].as<double>(), t_node[2].as<double>(), 0.0);
+            tf2::Quaternion q;
+            auto q_node = marker_node["q"].as<YAML::Node>();
+            q.setX(q_node[0].as<double>());
+            q.setY(q_node[1].as<double>());
+            q.setZ(q_node[2].as<double>());
+            q.setW(q_node[3].as<double>());
+            Marker marker(id, TransformWithCovariance(tf2::Transform(q, t)));
+            marker.set_is_fixed(is_fixed);
+            marker.set_update_count(update_count);
+            markers_[id] = marker;
+          }
+        }
+      }
+    }
+#endif
+      return map_unique;
     }
   };
 }
