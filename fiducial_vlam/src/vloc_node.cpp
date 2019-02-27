@@ -20,8 +20,8 @@ namespace fiducial_vlam
   {
     VlocContext cxt_{};
     std::unique_ptr<Map> map_{};
-    std::shared_ptr<CameraInfo> camera_info_{};
-    std::shared_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
+    std::unique_ptr<CameraInfo> camera_info_{};
+    std::unique_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
     Localizer localizer_{map_};
 
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_ =
@@ -51,9 +51,9 @@ namespace fiducial_vlam
         [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
           if (!camera_info_) {
-            camera_info_ = std::make_shared<CameraInfo>(*msg);
+            camera_info_ = std::make_unique<CameraInfo>(*msg);
             // Save the info message because we pass it along with the observations.
-            camera_info_msg_ = std::make_shared<sensor_msgs::msg::CameraInfo>(*msg);
+            camera_info_msg_ = std::make_unique<sensor_msgs::msg::CameraInfo>(*msg);
           }
         },
         16);

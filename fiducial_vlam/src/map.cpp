@@ -47,33 +47,6 @@ namespace fiducial_vlam
   Map::Map(double marker_length)
   {
     marker_length_ = marker_length;
-
-    // Create one entry in the map for now while debugging.
-//    auto first_marker_id = 1;
-//    tf2::Vector3 t{0, 0, 1};
-//    tf2::Quaternion q;
-//    q.setX(0.5);
-//    q.setY(-0.5);
-//    q.setZ(-0.5);
-//    q.setW(0.5);
-////     tf2::Vector3 t{0, 0, 0};
-////     tf2::Quaternion q;
-////     q.setX(0);
-////     q.setY(0);
-////     q.setZ(0);
-////     q.setW(1);
-//    tf2::Transform first_marker_transform(q, t);
-//    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform);
-//    Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
-//    first_marker.set_is_fixed(true);
-    //markers_[first_marker_id] = first_marker;
-
-
-//    std::string yaml;
-//    to_YAML_string(yaml);
-//    RCLCPP_INFO(node_.get_logger(), "yaml %s", yaml.c_str());
-//
-//    from_YAML_string(yaml);
   }
 
   Map::Map(const fiducial_vlam_msgs::msg::Map &msg)
@@ -113,92 +86,6 @@ namespace fiducial_vlam
     assert(markers_.count(id) == 0);
     markers_.emplace(id, std::move(marker));
   }
-
-//  static void to_YAML_header(const Map &map, YAML::Emitter &out)
-//  {
-//    out << YAML::Key << "marker_length" << YAML::Value << map.marker_length();
-//  }
-//
-//  static void to_YAML_marker(Marker &marker, YAML::Emitter &out)
-//  {
-//    out << YAML::BeginMap;
-//    out << YAML::Key << "id" << YAML::Value << marker.id();
-//    out << YAML::Key << "u" << YAML::Value << marker.update_count();
-//    out << YAML::Key << "f" << YAML::Value << (marker.is_fixed() ? 1 : 0);
-//    auto &t = marker.t_map_marker().transform().getOrigin();
-//    out << YAML::Key << "t" << YAML::Value << YAML::Flow << YAML::BeginSeq << t.x() << t.y() << t.z() << YAML::EndSeq;
-//    tf2::Quaternion q;
-//    marker.t_map_marker().transform().getBasis().getRotation(q);
-//    out << YAML::Key << "q" << YAML::Value << YAML::Flow << YAML::BeginSeq << q.x() << q.y() << q.z() << q.w()
-//        << YAML::EndSeq;
-//    out << YAML::EndMap;
-//  }
-//
-//  static void to_YAML_markers(const std::map<int, Marker> &markers_map, YAML::Emitter &out)
-//  {
-//    out << YAML::Key << "markers" << YAML::Value << YAML::BeginSeq;
-//    for (auto marker_pair : markers_map) {
-//      auto &marker = marker_pair.second;
-//      to_YAML_marker(marker, out);
-//    }
-//    out << YAML::EndSeq;
-//  }
-//
-//  static void to_YAML_map(const Map &map, YAML::Emitter &out)
-//  {
-//    out << YAML::BeginMap;
-//    to_YAML_header(map, out);
-//    to_YAML_markers(map.markers(), out);
-//    out << YAML::EndMap;
-//  }
-//
-
-//  static bool from_YAML_marker(Map &map, YAML::Node &marker_node)
-//  {
-//    auto id = marker_node["id"].as<int>();
-//    auto update_count = marker_node["u"].as<int>();
-//    auto is_fixed = marker_node["f"].as<int>();
-//    auto t_node = marker_node["t"].as<YAML::Node>();
-//    tf2::tf2Vector4 t(t_node[0].as<double>(), t_node[1].as<double>(), t_node[2].as<double>(), 0.0);
-//    tf2::Quaternion q;
-//    auto q_node = marker_node["q"].as<YAML::Node>();
-//    q.setX(q_node[0].as<double>());
-//    q.setY(q_node[1].as<double>());
-//    q.setZ(q_node[2].as<double>());
-//    q.setW(q_node[3].as<double>());
-//
-//    Marker marker(id, TransformWithCovariance(tf2::Transform(q, t)));
-//    marker.set_is_fixed(is_fixed);
-//    marker.set_update_count(update_count);
-//    //markers_[id] = marker;
-//    return false;
-//  }
-//
-//  static bool from_YAML_markers(Map &map, YAML::Node &markers_node)
-//  {
-//    for (YAML::const_iterator it = markers_node.begin(); it != markers_node.end(); ++it) {
-//      YAML::Node marker_node = *it;
-//      if (marker_node.IsMap()) {
-//        return from_YAML_marker(map, marker_node);
-//      }
-//    }
-//    return false;
-//  }
-//
-//  static bool from_YAML_map(Map &map, YAML::Node &map_node)
-//  {
-//    if (map_node.IsMap()) {
-//      auto marker_length_node = map_node["marker_length"];
-//      if (marker_length_node.IsScalar()) {
-//        map.set_marker_length(marker_length_node.as<double>());
-//        auto markers_node = map_node["markers"];
-//        if (markers_node.IsSequence()) {
-//          return from_YAML_markers(map, markers_node);
-//        }
-//      }
-//    }
-//    return false;
-//  }
 
 // ==============================================================================
 // Localizer class

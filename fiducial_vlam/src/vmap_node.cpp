@@ -124,7 +124,7 @@ namespace fiducial_vlam
         t_data[i] = i_node.as<double>();
       }
       std::array<double, 4> q_data;
-      for (int i = 0; i < 3; i += 1) {
+      for (int i = 0; i < 4; i += 1) {
         auto i_node = q_node[i];
         if (!i_node.IsScalar()) {
           return yaml_error("marker.q[i] failed IsScalar()");
@@ -286,7 +286,7 @@ namespace fiducial_vlam
     VmapContext cxt_{};
     std::unique_ptr<Map> map_{};
     Localizer localizer_{map_};
-    std::shared_ptr<Mapper> mapper_{};
+    std::unique_ptr<Mapper> mapper_{};
 
     int callbacks_processed_{0};
 
@@ -312,11 +312,11 @@ namespace fiducial_vlam
       // Initialize the map. Load from file or otherwise.
       map_ = initialize_map();
 
-      auto s = to_YAML(*map_);
-      auto m = from_YAML(*s);
+//      auto s = to_YAML(*map_);
+//      auto m = from_YAML(*s);
 
       // construct a map builder.
-      mapper_ = std::make_shared<MapperSimpleAverage>(map_);
+      mapper_ = std::make_unique<MapperSimpleAverage>(map_);
 
       // ROS subscriptions
       observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
@@ -454,35 +454,6 @@ namespace fiducial_vlam
         // An error occurred. Sometime get the string that describes the error
         // and do something with it.
       }
-#if 0
-      if (node.IsMap()) {
-      marker_length_ = node["marker_length"].as<double>();
-      YAML::Node markers_node = node["markers"].as<YAML::Node>();
-      if (markers_node.IsSequence()) {
-        markers_.clear(); // clear out the member map of markers.
-        for (YAML::const_iterator it = markers_node.begin(); it != markers_node.end(); ++it) {
-          YAML::Node marker_node = *it;
-          if (marker_node.IsMap()) {
-            auto id = marker_node["id"].as<int>();
-            auto update_count = marker_node["u"].as<int>();
-            auto is_fixed = marker_node["f"].as<int>();
-            auto t_node = marker_node["t"].as<YAML::Node>();
-            tf2::tf2Vector4 t(t_node[0].as<double>(), t_node[1].as<double>(), t_node[2].as<double>(), 0.0);
-            tf2::Quaternion q;
-            auto q_node = marker_node["q"].as<YAML::Node>();
-            q.setX(q_node[0].as<double>());
-            q.setY(q_node[1].as<double>());
-            q.setZ(q_node[2].as<double>());
-            q.setW(q_node[3].as<double>());
-            Marker marker(id, TransformWithCovariance(tf2::Transform(q, t)));
-            marker.set_is_fixed(is_fixed);
-            marker.set_update_count(update_count);
-            markers_[id] = marker;
-          }
-        }
-      }
-    }
-#endif
       return map_unique;
     }
 

@@ -56,7 +56,7 @@ namespace fiducial_vlam
     void set_update_count(int update_count)
     { update_count_ = update_count; }
 
-    auto &t_map_marker() const
+    const auto &t_map_marker() const
     { return t_map_marker_; }
 
     void set_t_map_marker(TransformWithCovariance t_map_marker)
@@ -82,7 +82,7 @@ namespace fiducial_vlam
     const auto &markers() const
     { return markers_; }
 
-    const auto marker_length() const
+    auto marker_length() const
     { return marker_length_; }
 
     Marker * find_marker(int id);
