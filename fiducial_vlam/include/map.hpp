@@ -73,7 +73,9 @@ namespace fiducial_vlam
     double marker_length_;
 
   public:
-    Map();
+    Map() = delete;
+
+    explicit Map(double marker_length_);
 
     explicit Map(const fiducial_vlam_msgs::msg::Map &msg);
 
@@ -82,9 +84,6 @@ namespace fiducial_vlam
 
     const auto marker_length() const
     { return marker_length_; }
-
-    void set_marker_length(int marker_length)
-    { marker_length_ = marker_length; }
 
     Marker * find_marker(int id);
 
@@ -100,10 +99,10 @@ namespace fiducial_vlam
 
   class Localizer
   {
-    const std::shared_ptr<Map> &map_;
+    const std::unique_ptr<Map> &map_;
 
   public:
-    explicit Localizer(const std::shared_ptr<Map> &map);
+    explicit Localizer(const std::unique_ptr<Map> &map);
 
     TransformWithCovariance average_t_map_camera(Observations &observations, FiducialMath &fm);
   };

@@ -23,13 +23,15 @@ namespace fiducial_vlam
   CXT_ELEM(map_init_pose_y, /* pose component for map initialization */ \
   0., double) \
   CXT_ELEM(map_init_pose_z, /* pose component for map initialization */ \
-  0., double) \
+  1., double) \
   CXT_ELEM(map_init_pose_roll, /* pose component for map initialization */ \
-  0., double) \
+  TF2SIMD_HALF_PI, double) \
   CXT_ELEM(map_init_pose_pitch, /* pose component for map initialization */ \
   0., double) \
   CXT_ELEM(map_init_pose_yaw, /* pose component for map initialization */ \
-  0., double) \
+  -TF2SIMD_HALF_PI, double) \
+  CXT_ELEM(marker_length, /* length of a side of a marker in meters */ \
+  0.1627, double) \
   CXT_ELEM(marker_map_publish_frequency_hz, /* Hz => rate at which the marker map is published */ \
   0., double) \
   CXT_ELEM(publish_marker_tfs, /* non-zero => publish the tf of all the known markers  */ \

@@ -44,29 +44,30 @@ namespace fiducial_vlam
 // Map class
 // ==============================================================================
 
-  Map::Map()
+  Map::Map(double marker_length)
   {
-    // Create one entry in the map for now while debugging.
-    auto first_marker_id = 1;
-    tf2::Vector3 t{0, 0, 1};
-    tf2::Quaternion q;
-    q.setX(0.5);
-    q.setY(-0.5);
-    q.setZ(-0.5);
-    q.setW(0.5);
-//     tf2::Vector3 t{0, 0, 0};
-//     tf2::Quaternion q;
-//     q.setX(0);
-//     q.setY(0);
-//     q.setZ(0);
-//     q.setW(1);
-    tf2::Transform first_marker_transform(q, t);
-    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform);
-    Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
-    first_marker.set_is_fixed(true);
-    markers_[first_marker_id] = first_marker;
+    marker_length_ = marker_length;
 
-    marker_length_ = 0.162718;
+    // Create one entry in the map for now while debugging.
+//    auto first_marker_id = 1;
+//    tf2::Vector3 t{0, 0, 1};
+//    tf2::Quaternion q;
+//    q.setX(0.5);
+//    q.setY(-0.5);
+//    q.setZ(-0.5);
+//    q.setW(0.5);
+////     tf2::Vector3 t{0, 0, 0};
+////     tf2::Quaternion q;
+////     q.setX(0);
+////     q.setY(0);
+////     q.setZ(0);
+////     q.setW(1);
+//    tf2::Transform first_marker_transform(q, t);
+//    auto first_marker_transform_with_covariance = TransformWithCovariance(first_marker_transform);
+//    Marker first_marker(first_marker_id, first_marker_transform_with_covariance);
+//    first_marker.set_is_fixed(true);
+    //markers_[first_marker_id] = first_marker;
+
 
 //    std::string yaml;
 //    to_YAML_string(yaml);
@@ -81,7 +82,7 @@ namespace fiducial_vlam
     for (int i = 0; i < msg.ids.size(); i += 1) {
       Marker marker(msg.ids[i], to_TransformWithCovariance(msg.poses[i]));
       marker.set_is_fixed(msg.fixed_flags[i] != 0);
-      markers_[marker.id()] = marker;
+      add_marker(marker.id(), std::move(marker));
     }
   }
 
@@ -203,7 +204,7 @@ namespace fiducial_vlam
 // Localizer class
 // ==============================================================================
 
-  Localizer::Localizer(const std::shared_ptr<Map> &map)
+  Localizer::Localizer(const std::unique_ptr<Map> &map)
     : map_(map)
   {
   }

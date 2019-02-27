@@ -19,9 +19,9 @@ namespace fiducial_vlam
   class VlocNode : public rclcpp::Node
   {
     VlocContext cxt_{};
-    std::shared_ptr<Map> map_{};
+    std::unique_ptr<Map> map_{};
     std::shared_ptr<CameraInfo> camera_info_{};
-    std::shared_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_;
+    std::shared_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
     Localizer localizer_{map_};
 
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_ =
@@ -73,7 +73,7 @@ namespace fiducial_vlam
         "/fiducial_map",
         [this](const fiducial_vlam_msgs::msg::Map::UniquePtr msg) -> void
         {
-          this->map_ = std::make_shared<Map>(*msg);
+          this->map_ = std::make_unique<Map>(*msg);
         },
         16);
 
