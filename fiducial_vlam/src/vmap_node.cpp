@@ -291,12 +291,9 @@ namespace fiducial_vlam
     int callbacks_processed_{0};
 
     // ROS publishers
-    rclcpp::Publisher<fiducial_vlam_msgs::msg::Map>::SharedPtr map_pub_ =
-      create_publisher<fiducial_vlam_msgs::msg::Map>("fiducial_map", 16);
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr fiducial_markers_pub_ =
-      create_publisher<visualization_msgs::msg::MarkerArray>("fiducial_markers", 16);
-    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_ =
-      create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+    rclcpp::Publisher<fiducial_vlam_msgs::msg::Map>::SharedPtr fiducial_map_pub_{};
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr fiducial_markers_pub_{};
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_{};
 
     rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
     rclcpp::TimerBase::SharedPtr map_pub_timer_;
@@ -318,9 +315,22 @@ namespace fiducial_vlam
       // construct a map builder.
       mapper_ = std::make_unique<MapperSimpleAverage>(map_);
 
+      // ROS publishers.
+      fiducial_map_pub_ = create_publisher<fiducial_vlam_msgs::msg::Map>(
+        cxt_.fiducial_map_pub_topic_, 16);
+
+      if (cxt_.publish_marker_visualizations_) {
+        fiducial_markers_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>(
+          cxt_.fiducial_markers_pub_topic_, 16);
+      }
+
+      if (cxt_.publish_tfs_) {
+        tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+      }
+
       // ROS subscriptions
       observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
-        "fiducial_observations",
+        cxt_.fiducial_observations_sub_topic_,
         [this](const fiducial_vlam_msgs::msg::Observations::UniquePtr msg) -> void
         {
           this->observations_callback(msg);
@@ -380,7 +390,7 @@ namespace fiducial_vlam
         auto mu = marker.t_map_marker().mu();
 
         std::ostringstream oss_child_frame_id;
-        oss_child_frame_id << "marker_" << std::setfill('0') << std::setw(3) << marker.id();
+        oss_child_frame_id << cxt_.marker_prefix_frame_id_ << std::setfill('0') << std::setw(3) << marker.id();
 
         tf2::Quaternion q;
         q.setRPY(mu[3], mu[4], mu[5]);
@@ -388,7 +398,7 @@ namespace fiducial_vlam
 
         geometry_msgs::msg::TransformStamped msg;
         msg.header.stamp = stamp;
-        msg.header.frame_id = "map";
+        msg.header.frame_id = cxt_.map_frame_id_;
         msg.child_frame_id = oss_child_frame_id.str();
         msg.transform = tf2::toMsg(tf2_transform);
 
@@ -405,7 +415,7 @@ namespace fiducial_vlam
         auto &marker = marker_pair.second;
         visualization_msgs::msg::Marker marker_msg;
         marker_msg.id = marker.id();
-        marker_msg.header.frame_id = "map";
+        marker_msg.header.frame_id = cxt_.map_frame_id_;
         marker_msg.pose = to_Pose_msg(marker.t_map_marker());
         marker_msg.type = visualization_msgs::msg::Marker::CUBE;
         marker_msg.action = visualization_msgs::msg::Marker::ADD;
@@ -426,8 +436,8 @@ namespace fiducial_vlam
       // publish the map
       std_msgs::msg::Header header;
       header.stamp = now();
-      header.frame_id = "map";
-      map_pub_->publish(*map_->to_map_msg(header, map_->marker_length()));
+      header.frame_id = cxt_.map_frame_id_;
+      fiducial_map_pub_->publish(*map_->to_map_msg(header, map_->marker_length()));
 
       // Publish the marker Visualization
       if (cxt_.publish_marker_visualizations_) {
@@ -435,7 +445,7 @@ namespace fiducial_vlam
       }
 
       // Publish the transform tree
-      if (cxt_.publish_marker_tfs_) {
+      if (cxt_.publish_tfs_) {
         tf_message_pub_->publish(to_tf_message());
       }
     }

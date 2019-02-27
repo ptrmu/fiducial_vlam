@@ -10,38 +10,72 @@ namespace fiducial_vlam
 {
 
 #define CXT_MACRO_ALL_PARAMS \
-  CXT_ELEM(marker_map_full_filename, /* name of the file to store the marker map in  */ \
+  CXT_ELEM(               /* topic for publishing map of markers  */ \
+  fiducial_map_pub_topic,  \
+  "/fiducial_map", std::string) \
+  CXT_ELEM(               /* topic for publishing rviz visualizations of the fiducial markers  */ \
+  fiducial_markers_pub_topic,  \
+  "fiducial_markers", std::string) \
+  \
+  CXT_ELEM(               /* topic for subscription to fiducial_vlam_msgs::msg::Observations  */ \
+  fiducial_observations_sub_topic,  \
+  "/fiducial_observations", std::string) \
+  \
+  CXT_ELEM(               /* frame_id for marker and tf messages - normally "map"  */ \
+  map_frame_id,  \
+  "map", std::string) \
+  CXT_ELEM(               /* frame_id for the child in the marker tf message  */\
+  marker_prefix_frame_id,  \
+  "marker_", std::string) \
+  \
+  CXT_ELEM(               /* non-zero => publish the tf of all the known markers  */ \
+  publish_tfs, \
+  1, int) \
+  CXT_ELEM(               /* non-zero => publish a shape that represents a marker  */ \
+  publish_marker_visualizations, \
+  1, int) \
+  CXT_ELEM(               /* Hz => rate at which the marker map is published */ \
+  marker_map_publish_frequency_hz, \
+  0., double) \
+  \
+  CXT_ELEM(               /* name of the file to store the marker map in  */  \
+  marker_map_full_filename, \
   "", std::string) \
-  CXT_ELEM(make_not_use_map, /* non-zero => create a new map  */ \
+  CXT_ELEM(               /* non-zero => create a new map  */\
+  make_not_use_map,  \
   1, int) \
-  CXT_ELEM(map_init_style, /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
+  CXT_ELEM(               /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
+  map_init_style, \
   1, int) \
-  CXT_ELEM(map_init_id, /* marker id for map initialization */ \
+  CXT_ELEM(               /* marker id for map initialization */ \
+  map_init_id,  \
   1, int) \
-  CXT_ELEM(map_init_pose_x, /* pose component for map initialization */ \
+  CXT_ELEM(               /* pose component for map initialization */ \
+  map_init_pose_x,  \
   0., double) \
-  CXT_ELEM(map_init_pose_y, /* pose component for map initialization */ \
+  CXT_ELEM(               /* pose component for map initialization */ \
+  map_init_pose_y,  \
   0., double) \
-  CXT_ELEM(map_init_pose_z, /* pose component for map initialization */ \
+  CXT_ELEM(               /* pose component for map initialization */ \
+  map_init_pose_z, \
   1., double) \
-  CXT_ELEM(map_init_pose_roll, /* pose component for map initialization */ \
+  CXT_ELEM(               /* pose component for map initialization */ \
+  map_init_pose_roll, \
   TF2SIMD_HALF_PI, double) \
-  CXT_ELEM(map_init_pose_pitch, /* pose component for map initialization */ \
+  CXT_ELEM(               /* pose component for map initialization */ \
+  map_init_pose_pitch,  \
   0., double) \
-  CXT_ELEM(map_init_pose_yaw, /* pose component for map initialization */ \
+  CXT_ELEM(               /* pose component for map initialization */ \
+  map_init_pose_yaw, \
   -TF2SIMD_HALF_PI, double) \
-  CXT_ELEM(marker_length, /* length of a side of a marker in meters */ \
+  CXT_ELEM(               /* length of a side of a marker in meters */ \
+  marker_length,  \
   0.1627, double) \
-  CXT_ELEM(marker_map_publish_frequency_hz, /* Hz => rate at which the marker map is published */ \
-  0., double) \
-  CXT_ELEM(publish_marker_tfs, /* non-zero => publish the tf of all the known markers  */ \
-  1, int) \
-  CXT_ELEM(publish_marker_visualizations, /* non-zero => publish a shape that represents a marker  */ \
-  1, int) \
   /* End of list */
 
 #define CXT_MACRO_ALL_MEMBERS \
-  CXT_MEMBER(map_init_transform,  /* A transform derived from individual parameters */ \
+  CXT_MEMBER(             /* A transform derived from individual parameters */ \
+  map_init_transform,  \
   TransformWithCovariance) \
   /* End of list */
 

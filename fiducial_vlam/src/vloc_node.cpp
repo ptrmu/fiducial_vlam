@@ -24,14 +24,10 @@ namespace fiducial_vlam
     std::unique_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
     Localizer localizer_{map_};
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_ =
-      create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("camera_pose", 16);
-    rclcpp::Publisher<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_pub_ =
-      create_publisher<fiducial_vlam_msgs::msg::Observations>("/fiducial_observations", 16);
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_ =
-      create_publisher<sensor_msgs::msg::Image>("image_marked", 16);
-    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_ =
-      create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_{};
+    rclcpp::Publisher<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_pub_{};
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_{};
+    rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_{};
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
@@ -45,9 +41,21 @@ namespace fiducial_vlam
       // Get parameters from the command line
       cxt_.load_parameters(*this);
 
+      // ROS publishers. Initialize after parameters have been loaded.
+      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        cxt_.camera_pose_pub_topic_, 16);
+      observations_pub_ = create_publisher<fiducial_vlam_msgs::msg::Observations>(
+        cxt_.fiducial_observations_pub_topic_, 16);
+      image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>(
+        cxt_.image_marked_pub_topic_, 16);
+
+      if (cxt_.publish_tfs_) {
+        tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+      }
+
       // ROS subscriptions
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
-        "camera_info",
+        cxt_.camera_info_sub_topic_,
         [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
           if (!camera_info_) {
@@ -59,7 +67,7 @@ namespace fiducial_vlam
         16);
 
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
-        "image_raw",
+        cxt_.image_raw_sub_topic_,
         [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // A map and cameraInfo must be received before processing can start.
@@ -70,7 +78,7 @@ namespace fiducial_vlam
         16);
 
       map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
-        "/fiducial_map",
+        cxt_.fiducial_map_sub_topic_,
         [this](const fiducial_vlam_msgs::msg::Map::UniquePtr msg) -> void
         {
           this->map_ = std::make_unique<Map>(*msg);
@@ -108,7 +116,7 @@ namespace fiducial_vlam
         geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
         cam_pose_f_map.pose.pose = t_map_camera_msg.pose.pose;
         cam_pose_f_map.header = image_msg.header;
-        cam_pose_f_map.header.frame_id = "map";
+        cam_pose_f_map.header.frame_id = cxt_.map_frame_id_;
         cam_pose_f_map.pose.covariance[0] = 6e-3;
         cam_pose_f_map.pose.covariance[7] = 6e-3;
         cam_pose_f_map.pose.covariance[14] = 6e-3;
@@ -119,7 +127,7 @@ namespace fiducial_vlam
 
         // Also publish the camera's tf
         // todo: give the tf a name based on the camera id.
-        if (cxt_.publish_camera_tf_) {
+        if (cxt_.publish_tfs_) {
           publish_camera_tf(t_map_camera);
         }
       }
@@ -166,8 +174,8 @@ namespace fiducial_vlam
 
       geometry_msgs::msg::TransformStamped msg;
       msg.header.stamp = stamp;
-      msg.header.frame_id = "map";
-      msg.child_frame_id = "camera";
+      msg.header.frame_id = cxt_.map_frame_id_;
+      msg.child_frame_id = cxt_.camera_frame_id_;
       msg.transform = tf2::toMsg(t_map_camera.transform());
       tf_message.transforms.emplace_back(msg);
 

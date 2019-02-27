@@ -10,7 +10,35 @@ namespace fiducial_vlam
 {
 
 #define CXT_MACRO_ALL_PARAMS \
-  CXT_ELEM(publish_camera_tf, /* non-zero => publish the tf of the camera at every frame  */ \
+  CXT_ELEM(               /* topic for publishing fiducial observations  */ \
+  fiducial_observations_pub_topic,  \
+  "/fiducial_observations", std::string) \
+  CXT_ELEM(               /* topic for publishing camera pose  */ \
+  camera_pose_pub_topic,  \
+  "camera_pose", std::string) \
+  CXT_ELEM(               /* topic for republishing the image with axes added to fiducial markers  */\
+  image_marked_pub_topic,  \
+  "image_marked", std::string) \
+  \
+  CXT_ELEM(               /* topic for subscription to fiducial_vlam_msgs::msg::Map  */\
+  fiducial_map_sub_topic,  \
+  "/fiducial_map", std::string) \
+  CXT_ELEM(               /* topic for subscription to sensor_msgs::msg::CameraInfo associated with the image  */ \
+  camera_info_sub_topic,  \
+  "camera_info", std::string) \
+  CXT_ELEM(               /* topic for subscription to sensor_msgs::msg::Image */ \
+  image_raw_sub_topic,  \
+  "image_raw", std::string) \
+  \
+  CXT_ELEM(               /* frame_id for camera pose and tf messages - normally "map"  */ \
+  map_frame_id,  \
+  "map", std::string) \
+  CXT_ELEM(               /* frame_id for the child in the tf message  */\
+  camera_frame_id,  \
+  "camera", std::string) \
+  \
+  CXT_ELEM(               /* non-zero => publish the tf of the camera at every frame  */ \
+  publish_tfs,  \
   1, int) \
   /* End of list */
 
