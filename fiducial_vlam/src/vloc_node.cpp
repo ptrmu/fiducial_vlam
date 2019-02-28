@@ -100,41 +100,52 @@ namespace fiducial_vlam
       // observations.
       Observations observations(fm.detect_markers(color));
 
-      // Stop if no markers were detected
-      if (observations.size() == 0) {
-        return;
-      }
+      TransformWithCovariance t_map_camera;
 
-      // Find the camera pose from the observations.
-      auto t_map_camera = localizer_.average_t_map_camera(observations, fm);
+      // Only try to determine the location if markers were detected.
+      if (observations.size()) {
 
-      if (t_map_camera.is_valid()) {
-        // Publish the camera pose in the map frame
-        auto t_map_camera_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, image_msg.header);
+//        RCLCPP_INFO(get_logger(), "%i observations", observations.size());
+//        for (auto &obs : observations.observations()) {
+//          RCLCPP_INFO(get_logger(),
+//                      " Marker %i, p0[%8.3f, %8.3f], p1[%8.3f, %8.3f], p2[%8.3f, %8.3f], p3[%8.3f, %8.3f]",
+//                      obs.id(),
+//                      obs.x0(), obs.y0(), obs.x1(), obs.y1(),
+//                      obs.x2(), obs.y2(), obs.x3(), obs.y3()
+//          );
+//        }
 
-        // for now just publish a pose message not a pose
-        geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
-        cam_pose_f_map.pose.pose = t_map_camera_msg.pose.pose;
-        cam_pose_f_map.header = image_msg.header;
-        cam_pose_f_map.header.frame_id = cxt_.map_frame_id_;
-        cam_pose_f_map.pose.covariance[0] = 6e-3;
-        cam_pose_f_map.pose.covariance[7] = 6e-3;
-        cam_pose_f_map.pose.covariance[14] = 6e-3;
-        cam_pose_f_map.pose.covariance[21] = 2e-3;
-        cam_pose_f_map.pose.covariance[28] = 2e-3;
-        cam_pose_f_map.pose.covariance[35] = 2e-3;
-        camera_pose_pub_->publish(cam_pose_f_map);
+        // Find the camera pose from the observations.
+        t_map_camera = localizer_.average_t_map_camera(observations, fm);
 
-        // Also publish the camera's tf
-        // todo: give the tf a name based on the camera id.
-        if (cxt_.publish_tfs_) {
-          publish_camera_tf(t_map_camera);
+        if (t_map_camera.is_valid()) {
+          // Publish the camera pose in the map frame
+          auto t_map_camera_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, image_msg.header);
+
+          // for now just publish a pose message not a pose
+          geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
+          cam_pose_f_map.pose.pose = t_map_camera_msg.pose.pose;
+          cam_pose_f_map.header = image_msg.header;
+          cam_pose_f_map.header.frame_id = cxt_.map_frame_id_;
+          cam_pose_f_map.pose.covariance[0] = 6e-3;
+          cam_pose_f_map.pose.covariance[7] = 6e-3;
+          cam_pose_f_map.pose.covariance[14] = 6e-3;
+          cam_pose_f_map.pose.covariance[21] = 2e-3;
+          cam_pose_f_map.pose.covariance[28] = 2e-3;
+          cam_pose_f_map.pose.covariance[35] = 2e-3;
+          camera_pose_pub_->publish(cam_pose_f_map);
+
+          // Also publish the camera's tf
+          // todo: give the tf a name based on the camera id.
+          if (cxt_.publish_tfs_) {
+            publish_camera_tf(t_map_camera);
+          }
         }
-      }
 
-      // Publish the observations
-      auto observations_msg = observations.to_msg(image_msg.header, *camera_info_msg_);
-      observations_pub_->publish(observations_msg);
+        // Publish the observations
+        auto observations_msg = observations.to_msg(image_msg.header, *camera_info_msg_);
+        observations_pub_->publish(observations_msg);
+      }
 
       // Publish an annotated image
       if (count_subscribers(image_marked_pub_->get_topic_name()) > 0) {

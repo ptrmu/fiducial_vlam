@@ -588,8 +588,10 @@ namespace fiducial_vlam
         if (map_temp) {
           auto marker_temp = map_temp->find_marker(cxt_.map_init_id_);
           if (marker_temp) {
+            auto marker_copy = *marker_temp;
+            marker_copy.set_is_fixed(true);
             map_unique = std::make_unique<Map>(cxt_.marker_length_);
-            map_unique->add_marker(*marker_temp);
+            map_unique->add_marker(std::move(marker_copy));
             return map_unique;
           }
         }
@@ -597,7 +599,9 @@ namespace fiducial_vlam
 
       // Style 1 initialization. Get the info from parameters.
       map_unique = std::make_unique<Map>(cxt_.marker_length_);
-      map_unique->add_marker(Marker(cxt_.map_init_id_, cxt_.map_init_transform_));
+      auto marker_new = Marker(cxt_.map_init_id_, cxt_.map_init_transform_);
+      marker_new.set_is_fixed(true);
+      map_unique->add_marker(std::move(marker_new));
 
       return map_unique;
     }
