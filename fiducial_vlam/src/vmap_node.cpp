@@ -2,6 +2,8 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
+#include <sstream>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -23,57 +25,55 @@ namespace fiducial_vlam
   class ToYAML
   {
     const Map &map_;
-    YAML::Emitter out_;
-
+    YAML::Emitter emitter_{};
 
     void do_header()
     {
-      out_ << YAML::Key << "marker_length" << YAML::Value << map_.marker_length();
+      emitter_ << YAML::Key << "marker_length" << YAML::Value << map_.marker_length();
     }
 
     void do_marker(const Marker &marker)
     {
-      out_ << YAML::BeginMap;
-      out_ << YAML::Key << "id" << YAML::Value << marker.id();
-      out_ << YAML::Key << "u" << YAML::Value << marker.update_count();
-      out_ << YAML::Key << "f" << YAML::Value << (marker.is_fixed() ? 1 : 0);
+      emitter_ << YAML::BeginMap;
+      emitter_ << YAML::Key << "id" << YAML::Value << marker.id();
+      emitter_ << YAML::Key << "u" << YAML::Value << marker.update_count();
+      emitter_ << YAML::Key << "f" << YAML::Value << (marker.is_fixed() ? 1 : 0);
       auto &c = marker.t_map_marker().transform().getOrigin();
-      out_ << YAML::Key << "t" << YAML::Value << YAML::Flow << YAML::BeginSeq << c.x() << c.y() << c.z()
+      emitter_ << YAML::Key << "xyz" << YAML::Value << YAML::Flow << YAML::BeginSeq << c.x() << c.y() << c.z()
            << YAML::EndSeq;
-      tf2::Quaternion q;
-      marker.t_map_marker().transform().getBasis().getRotation(q);
-      out_ << YAML::Key << "q" << YAML::Value << YAML::Flow << YAML::BeginSeq << q.x() << q.y() << q.z() << q.w()
-           << YAML::EndSeq;
-      out_ << YAML::EndMap;
+      double roll, pitch, yaw;
+      marker.t_map_marker().transform().getBasis().getRPY(roll, pitch, yaw);
+      emitter_ << YAML::Key << "rpy" << YAML::Value << YAML::Flow << YAML::BeginSeq << roll << pitch << yaw << YAML::EndSeq;
+      emitter_ << YAML::EndMap;
     }
 
     void do_markers()
     {
-      out_ << YAML::Key << "markers" << YAML::Value << YAML::BeginSeq;
+      emitter_ << YAML::Key << "markers" << YAML::Value << YAML::BeginSeq;
       for (auto &marker_pair : map_.markers()) {
         auto &marker = marker_pair.second;
         do_marker(marker);
       }
-      out_ << YAML::EndSeq;
+      emitter_ << YAML::EndSeq;
     }
 
     void do_map()
     {
-      out_ << YAML::BeginMap;
+      emitter_ << YAML::BeginMap;
       do_header();
       do_markers();
-      out_ << YAML::EndMap;
+      emitter_ << YAML::EndMap;
     }
 
   public:
     ToYAML(const Map &map)
-      : map_(map), out_()
+      : map_(map)
     {}
 
-    std::unique_ptr<std::string> to_YAML()
+    void to_YAML(std::ostream &out_stream)
     {
       do_map();
-      return std::make_unique<std::string>(out_.c_str());
+      out_stream << emitter_.c_str() << std::endl;
     }
   };
 
@@ -83,8 +83,10 @@ namespace fiducial_vlam
 
   class FromYAML
   {
-    YAML::Node map_node_;
+    YAML::Node yaml_node_{};
     std::unique_ptr<Map> map_{};
+    std::string error_msg_{};
+
 
     bool from_marker(YAML::Node &marker_node)
     {
@@ -100,53 +102,50 @@ namespace fiducial_vlam
       if (!is_fixed_node.IsScalar()) {
         return yaml_error("marker.is_fixed failed IsScalar()");
       }
-      auto t_node = marker_node["t"];
-      if (!t_node.IsSequence()) {
-        return yaml_error("marker.t failed IsSequence()");
+      auto xyz_node = marker_node["xyz"];
+      if (!xyz_node.IsSequence()) {
+        return yaml_error("marker.xyz failed IsSequence()");
       }
-      if (t_node.size() != 3) {
-        return yaml_error("marker.t incorrect size");
+      if (xyz_node.size() != 3) {
+        return yaml_error("marker.xyz incorrect size");
       }
-      auto q_node = marker_node["q"];
-      if (!q_node.IsSequence()) {
-        return yaml_error("marker.q failed IsSequence()");
+      auto rpy_node = marker_node["rpy"];
+      if (!rpy_node.IsSequence()) {
+        return yaml_error("marker.rpy failed IsSequence()");
       }
-      if (q_node.size() != 4) {
-        return yaml_error("marker.q incorrect size");
+      if (rpy_node.size() != 3) {
+        return yaml_error("marker.rpy incorrect size");
       }
 
-      std::array<double, 3> t_data;
-      for (int i = 0; i < 3; i += 1) {
-        auto i_node = t_node[i];
+      std::array<double, 3> xyz_data;
+      for (int i = 0; i < xyz_data.size(); i += 1) {
+        auto i_node = xyz_node[i];
         if (!i_node.IsScalar()) {
-          return yaml_error("marker.t[i] failed IsScalar()");
+          return yaml_error("marker.xyz[i] failed IsScalar()");
         }
-        t_data[i] = i_node.as<double>();
+        xyz_data[i] = i_node.as<double>();
       }
-      std::array<double, 4> q_data;
-      for (int i = 0; i < 4; i += 1) {
-        auto i_node = q_node[i];
+      std::array<double, 3> rpy_data;
+      for (int i = 0; i < rpy_data.size(); i += 1) {
+        auto i_node = rpy_node[i];
         if (!i_node.IsScalar()) {
-          return yaml_error("marker.q[i] failed IsScalar()");
+          return yaml_error("marker.rpy[i] failed IsScalar()");
         }
-        q_data[i] = i_node.as<double>();
+        rpy_data[i] = i_node.as<double>();
       }
 
-      tf2::tf2Vector4 t(
-        t_data[0],
-        t_data[1],
-        t_data[2],
-        0.0);
-      tf2::Quaternion q;
-      q.setX(q_data[0]);
-      q.setY(q_data[1]);
-      q.setZ(q_data[2]);
-      q.setW(q_data[3]);
+      TransformWithCovariance::mu_type mu{
+        xyz_data[0],
+        xyz_data[1],
+        xyz_data[2],
+        rpy_data[0],
+        rpy_data[1],
+        rpy_data[2]};
 
-      Marker marker(id_node.as<int>(), TransformWithCovariance(tf2::Transform(q, t)));
+      Marker marker(id_node.as<int>(), TransformWithCovariance(mu));
       marker.set_is_fixed(is_fixed_node.as<int>());
       marker.set_update_count(update_count_node.as<int>());
-      map_->add_marker(marker.id(), marker);
+      map_->add_marker(std::move(marker));
       return true;
     }
 
@@ -167,13 +166,13 @@ namespace fiducial_vlam
 
     bool from_map()
     {
-      if (map_node_.IsMap()) {
-        auto marker_length_node = map_node_["marker_length"];
+      if (yaml_node_.IsMap()) {
+        auto marker_length_node = yaml_node_["marker_length"];
         if (marker_length_node.IsScalar()) {
           auto marker_length = marker_length_node.as<double>();
           // create the map object now that we have the marker_length;
           map_ = std::make_unique<Map>(marker_length);
-          auto markers_node = map_node_["markers"];
+          auto markers_node = yaml_node_["markers"];
           if (markers_node.IsSequence()) {
             return from_markers(markers_node);
           }
@@ -190,16 +189,30 @@ namespace fiducial_vlam
     }
 
   public:
-    FromYAML(const std::string &yaml)
-      : map_node_(YAML::Load(yaml))
-    {}
+    FromYAML() = default;
 
-    std::unique_ptr<Map> from_YAML()
+    std::unique_ptr<Map> from_YAML(std::istream &in)
     {
-      if (!from_map() && map_) {
-        map_.release();
+      try {
+        yaml_node_ = YAML::Load(in);
+        error_msg_ = "";
+        if (!from_map() && map_) {
+          map_.release();
+        }
+        return std::move(map_);
+      }
+      catch (YAML::ParserException &ex) {
+        if (map_) {
+          map_.release();
+        }
+        error_msg_ = ex.what();
       }
       return std::move(map_);
+    }
+
+    std::string error_msg()
+    {
+      return error_msg_;
     }
   };
 
@@ -209,11 +222,13 @@ namespace fiducial_vlam
 
   class Mapper
   {
-    std::unique_ptr<Map> &map_;
+  protected:
+    const VmapContext &cxt_;
+    const std::unique_ptr<Map> &map_;
 
   public:
-    explicit Mapper(std::unique_ptr<Map> &map)
-      : map_(map)
+    explicit Mapper(const VmapContext &cxt, std::unique_ptr<Map> &map)
+      : cxt_(cxt), map_(map)
     {
     }
 
@@ -221,13 +236,14 @@ namespace fiducial_vlam
 
     virtual ~Mapper() = default;
 
-    auto &map()
-    { return map_; }
-
     virtual void
     update_map(const TransformWithCovariance &camera_pose_f_map,
                const Observations &observations,
                FiducialMath &fm) = 0;
+
+    virtual std::unique_ptr<Map>
+    initialize_map_from_observations(const Observations &observations,
+                                     FiducialMath &fm) = 0;
   };
 
 // ==============================================================================
@@ -237,8 +253,8 @@ namespace fiducial_vlam
   class MapperSimpleAverage : public Mapper
   {
   public:
-    explicit MapperSimpleAverage(std::unique_ptr<Map> &map)
-      : Mapper(map)
+    explicit MapperSimpleAverage(const VmapContext &cxt, std::unique_ptr<Map> &map)
+      : Mapper(cxt, map)
     {
     }
 
@@ -250,17 +266,17 @@ namespace fiducial_vlam
       // For all observations estimate the marker location and update the map
       for (auto &observation : observations.observations()) {
 
-        auto t_camera_marker = fm.solve_t_camera_marker(observation, map()->marker_length());
+        auto t_camera_marker = fm.solve_t_camera_marker(observation, map_->marker_length());
         auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
 
         // Update an existing marker or add a new one.
-        auto marker_ptr = map()->find_marker(observation.id());
+        auto marker_ptr = map_->find_marker(observation.id());
         if (marker_ptr) {
           auto &marker = *marker_ptr;
           update_marker_simple_average(marker, t_map_marker);
 
         } else {
-          map()->add_marker(observation.id(), Marker(observation.id(), t_map_marker));
+          map_->add_marker(Marker(observation.id(), t_map_marker));
         }
       }
     }
@@ -274,6 +290,36 @@ namespace fiducial_vlam
         existing.set_t_map_marker(t_map_marker);
         existing.set_update_count(update_count + 1);
       }
+    }
+
+    std::unique_ptr<Map> initialize_map_from_observations(const Observations &observations, FiducialMath &fm) override
+    {
+      std::unique_ptr<Map> map_unique{};
+      if (observations.size() < 1) {
+        return map_unique;
+      }
+
+      // Find the marker with the lowest id
+      int min_id = std::numeric_limits<int>::max();
+      const Observation *min_obs;
+      for (auto &obs : observations.observations()) {
+        if (obs.id() < min_id) {
+          min_id = obs.id();
+          min_obs = &obs;
+        }
+      }
+
+      // Find t_camera_marker
+      auto t_camera_marker = fm.solve_t_camera_marker(*min_obs, cxt_.marker_length_);
+
+      // And t_map_camera
+      auto t_map_camera = cxt_.map_init_transform_;
+
+      // Figure t_map_marker and add a marker to the map.
+      auto t_map_marker = TransformWithCovariance(t_map_camera.transform() * t_camera_marker.transform());
+      map_unique->add_marker(Marker(min_id, std::move(t_map_marker)));
+
+      return map_unique;
     }
   };
 
@@ -309,11 +355,11 @@ namespace fiducial_vlam
       // Initialize the map. Load from file or otherwise.
       map_ = initialize_map();
 
-//      auto s = to_YAML(*map_);
-//      auto m = from_YAML(*s);
+//      auto s = to_YAML_string(*map_, "test");
+//      auto m = from_YAML_string(s, "test");
 
       // construct a map builder.
-      mapper_ = std::make_unique<MapperSimpleAverage>(map_);
+      mapper_ = std::make_unique<MapperSimpleAverage>(cxt_, map_);
 
       // ROS publishers.
       fiducial_map_pub_ = create_publisher<fiducial_vlam_msgs::msg::Map>(
@@ -364,7 +410,12 @@ namespace fiducial_vlam
       // Get observations from the message.
       Observations observations(*msg);
 
-      // THere is nothing to do at this point unless we have more than one observation.
+      // If the map has not yet been initialized, then initialize it with these observations.
+      if (!map_) {
+        map_ = mapper_->initialize_map_from_observations(observations, fm);
+      }
+
+      // There is nothing to do at this point unless we have more than one observation.
       if (observations.size() < 2) {
         return;
       }
@@ -448,24 +499,67 @@ namespace fiducial_vlam
       if (cxt_.publish_tfs_) {
         tf_message_pub_->publish(to_tf_message());
       }
+
+      // Save the map
+      if (cxt_.make_not_use_map_ && cxt_.marker_map_full_filename_.size()) {
+        to_YAML_file(*map_, cxt_.marker_map_full_filename_);
+      }
     }
 
-    std::unique_ptr<std::string> to_YAML(const Map &map)
+    void to_YAML_stream(const Map &map, std::ostream &out, const std::string &filename)
     {
       ToYAML to_YAML{map};
-      return to_YAML.to_YAML();
+      to_YAML.to_YAML(out);
     }
 
-    std::unique_ptr<Map> from_YAML(std::string &yaml)
+    std::string to_YAML_string(const Map &map, const std::string &filename)
     {
-      FromYAML from_YAML(yaml);
-      auto map_unique = from_YAML.from_YAML();
+      std::stringstream out;
+      to_YAML_stream(map, out, filename);
+      return out.str();
+    }
+
+    void to_YAML_file(const Map &map, const std::string &filename)
+    {
+      std::ofstream out(filename);
+      if (out) {
+        to_YAML_stream(map, out, filename);
+        return;
+      }
+      RCLCPP_INFO(get_logger(), "Config error: can not open config file for writing: '%s'", filename.c_str());
+    }
+
+    std::unique_ptr<Map> from_YAML_stream(std::istream &in, const std::string &filename)
+    {
+      FromYAML from_YAML;
+      auto map_unique = from_YAML.from_YAML(in);
       if (!map_unique) {
-        // An error occurred. Sometime get the string that describes the error
-        // and do something with it.
+        // Only display an error if a filename is provided.
+        if (filename.size()) {
+          RCLCPP_INFO(get_logger(), "Config error: error parsing config file: '%s'", filename.c_str());
+          RCLCPP_INFO(get_logger(), "Config error: '%s'", from_YAML.error_msg().c_str());
+        }
       }
       return map_unique;
     }
+
+    std::unique_ptr<Map> from_YAML_string(const std::string &yaml, const std::string &filename)
+    {
+      std::stringstream ss{yaml};
+      return from_YAML_stream(ss, filename);
+    }
+
+    std::unique_ptr<Map> from_YAML_file(const std::string &filename)
+    {
+      std::ifstream in;
+      in.open(filename, std::ifstream::in);
+      if (in.good()) {
+        return from_YAML_stream(in, filename);
+      }
+      RCLCPP_INFO(get_logger(), "Config error: can not open config file for reading: '%s'", filename.c_str());
+      return std::unique_ptr<Map>{};
+    }
+
 
     std::unique_ptr<Map> initialize_map()
     {
@@ -474,6 +568,10 @@ namespace fiducial_vlam
       // If not building a map, then load the map from a file
       if (!cxt_.make_not_use_map_) {
         // load the map.
+        map_unique = from_YAML_file(cxt_.marker_map_full_filename_);
+        if (map_unique) {
+          return map_unique;
+        }
         // If an error, fall into initialize the map
       }
 
@@ -486,13 +584,20 @@ namespace fiducial_vlam
       // if Style == 0, look for a file and pull the pose from it.
       // If there is a problem, fall into style 1.
       if (cxt_.map_init_style_ == 0) {
-        // find the file
+        auto map_temp = from_YAML_file(cxt_.marker_map_full_filename_);
+        if (map_temp) {
+          auto marker_temp = map_temp->find_marker(cxt_.map_init_id_);
+          if (marker_temp) {
+            map_unique = std::make_unique<Map>(cxt_.marker_length_);
+            map_unique->add_marker(*marker_temp);
+            return map_unique;
+          }
+        }
       }
 
       // Style 1 initialization. Get the info from parameters.
       map_unique = std::make_unique<Map>(cxt_.marker_length_);
-      map_unique->add_marker(cxt_.map_init_id_,
-                             Marker(cxt_.map_init_id_, cxt_.map_init_transform_));
+      map_unique->add_marker(Marker(cxt_.map_init_id_, cxt_.map_init_transform_));
 
       return map_unique;
     }

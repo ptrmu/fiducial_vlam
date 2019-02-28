@@ -37,8 +37,8 @@ namespace fiducial_vlam
   public:
     Marker() = default;
 
-    Marker(int id, const TransformWithCovariance &t_map_marker)
-      : id_(id), t_map_marker_(t_map_marker), update_count_(1)
+    Marker(int id, TransformWithCovariance t_map_marker)
+      : id_(id), t_map_marker_(std::move(t_map_marker)), update_count_(1)
     {}
 
     auto id() const
@@ -60,7 +60,7 @@ namespace fiducial_vlam
     { return t_map_marker_; }
 
     void set_t_map_marker(TransformWithCovariance t_map_marker)
-    { t_map_marker_ = t_map_marker; }
+    { t_map_marker_ = std::move(t_map_marker); }
   };
 
 // ==============================================================================
@@ -87,7 +87,7 @@ namespace fiducial_vlam
 
     Marker * find_marker(int id);
 
-    void add_marker(int id, Marker marker);
+    void add_marker(Marker marker);
 
     std::unique_ptr<fiducial_vlam_msgs::msg::Map>
     to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length);

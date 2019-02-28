@@ -55,7 +55,7 @@ namespace fiducial_vlam
     for (int i = 0; i < msg.ids.size(); i += 1) {
       Marker marker(msg.ids[i], to_TransformWithCovariance(msg.poses[i]));
       marker.set_is_fixed(msg.fixed_flags[i] != 0);
-      add_marker(marker.id(), std::move(marker));
+      add_marker(std::move(marker));
     }
   }
 
@@ -81,10 +81,10 @@ namespace fiducial_vlam
     return marker_pair == markers_.end() ? nullptr : &marker_pair->second;
   }
 
-  void Map::add_marker(int id, Marker marker)
+  void Map::add_marker(Marker marker)
   {
-    assert(markers_.count(id) == 0);
-    markers_.emplace(id, std::move(marker));
+    assert(markers_.count(marker.id()) == 0);
+    markers_.emplace(marker.id(), std::move(marker));
   }
 
 // ==============================================================================

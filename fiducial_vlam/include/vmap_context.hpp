@@ -40,7 +40,7 @@ namespace fiducial_vlam
   \
   CXT_ELEM(               /* name of the file to store the marker map in  */  \
   marker_map_full_filename, \
-  "", std::string) \
+  "fiducial_marker_locations.yaml", std::string) \
   CXT_ELEM(               /* non-zero => create a new map  */\
   make_not_use_map,  \
   1, int) \
