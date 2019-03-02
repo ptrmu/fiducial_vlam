@@ -136,14 +136,19 @@ namespace fiducial_vlam
           camera_pose_pub_->publish(cam_pose_f_map);
 
           // Also publish the camera's tf
-          // todo: give the tf a name based on the camera id.
+          // todo: give the tf a frame_id based on the camera id.
           if (cxt_.publish_tfs_) {
-            publish_camera_tf(t_map_camera);
+            publish_camera_tf(
+              cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
+              t_map_camera);
           }
         }
 
         // Publish the observations
-        auto observations_msg = observations.to_msg(image_msg.header, *camera_info_msg_);
+        auto observations_msg = observations.to_msg(
+          cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
+          image_msg.header.frame_id,
+          *camera_info_msg_);
         observations_pub_->publish(observations_msg);
       }
 
@@ -178,9 +183,8 @@ namespace fiducial_vlam
       }
     }
 
-    void publish_camera_tf(const TransformWithCovariance &t_map_camera)
+    void publish_camera_tf(std_msgs::msg::Header::_stamp_type stamp, const TransformWithCovariance &t_map_camera)
     {
-      auto stamp = now();
       tf2_msgs::msg::TFMessage tf_message;
 
       geometry_msgs::msg::TransformStamped msg;

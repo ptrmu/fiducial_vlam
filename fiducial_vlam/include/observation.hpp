@@ -100,7 +100,8 @@ namespace fiducial_vlam
       observations_.emplace_back(std::move(observation));
     }
 
-    fiducial_vlam_msgs::msg::Observations to_msg(const std_msgs::msg::Header &header_msg,
+    fiducial_vlam_msgs::msg::Observations to_msg(std_msgs::msg::Header::_stamp_type stamp,
+                                                 const std_msgs::msg::Header::_frame_id_type &frame_id,
                                                  const sensor_msgs::msg::CameraInfo &camera_info_msg);
   };
 

@@ -501,8 +501,8 @@ namespace fiducial_vlam
       }
 
       // Save the map
-      if (cxt_.make_not_use_map_ && cxt_.marker_map_full_filename_.size()) {
-        to_YAML_file(*map_, cxt_.marker_map_full_filename_);
+      if (cxt_.make_not_use_map_ && cxt_.marker_map_save_full_filename_.size()) {
+        to_YAML_file(*map_, cxt_.marker_map_save_full_filename_);
       }
     }
 
@@ -568,7 +568,7 @@ namespace fiducial_vlam
       // If not building a map, then load the map from a file
       if (!cxt_.make_not_use_map_) {
         // load the map.
-        map_unique = from_YAML_file(cxt_.marker_map_full_filename_);
+        map_unique = from_YAML_file(cxt_.marker_map_load_full_filename_);
         if (map_unique) {
           return map_unique;
         }
@@ -584,7 +584,7 @@ namespace fiducial_vlam
       // if Style == 0, look for a file and pull the pose from it.
       // If there is a problem, fall into style 1.
       if (cxt_.map_init_style_ == 0) {
-        auto map_temp = from_YAML_file(cxt_.marker_map_full_filename_);
+        auto map_temp = from_YAML_file(cxt_.marker_map_load_full_filename_);
         if (map_temp) {
           auto marker_temp = map_temp->find_marker(cxt_.map_init_id_);
           if (marker_temp) {

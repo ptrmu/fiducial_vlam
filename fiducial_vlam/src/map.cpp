@@ -18,13 +18,16 @@ namespace fiducial_vlam
     }
   }
 
-  fiducial_vlam_msgs::msg::Observations Observations::to_msg(const std_msgs::msg::Header &header_msg,
+  fiducial_vlam_msgs::msg::Observations Observations::to_msg(std_msgs::msg::Header::_stamp_type stamp,
+                                                             const std_msgs::msg::Header::_frame_id_type &frame_id,
                                                              const sensor_msgs::msg::CameraInfo &camera_info_msg)
   {
     fiducial_vlam_msgs::msg::Observations msg;
-    msg.header = header_msg;
+    msg.header.frame_id = frame_id;
+    msg.header.stamp = stamp;
     msg.camera_info = camera_info_msg;
-    for (auto observation : observations_) {
+    for (
+      auto observation: observations_) {
       fiducial_vlam_msgs::msg::Observation obs_msg;
       obs_msg.id = observation.id();
       obs_msg.x0 = observation.x0();
@@ -35,9 +38,11 @@ namespace fiducial_vlam
       obs_msg.y1 = observation.y1();
       obs_msg.y2 = observation.y2();
       obs_msg.y3 = observation.y3();
-      msg.observations.emplace_back(obs_msg);
+      msg.observations.
+        emplace_back(obs_msg);
     }
-    return msg;
+    return
+      msg;
   }
 
 // ==============================================================================

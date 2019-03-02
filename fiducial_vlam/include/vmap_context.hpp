@@ -39,11 +39,14 @@ namespace fiducial_vlam
   0., double) \
   \
   CXT_ELEM(               /* name of the file to store the marker map in  */  \
-  marker_map_full_filename, \
+  marker_map_save_full_filename, \
   "fiducial_marker_locations.yaml", std::string) \
+  CXT_ELEM(               /* name of the file to load the marker map from  */  \
+  marker_map_load_full_filename, \
+  "fiducial_marker_locations_saved.yaml", std::string) \
   CXT_ELEM(               /* non-zero => create a new map  */\
   make_not_use_map,  \
-  1, int) \
+  0, int) \
   CXT_ELEM(               /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
   map_init_style, \
   1, int) \
