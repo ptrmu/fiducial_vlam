@@ -4,7 +4,6 @@
 #include <map>
 
 #include "convert_util.hpp"
-#include "observation.hpp"
 #include "transform_with_covariance.hpp"
 
 #include "fiducial_vlam_msgs/msg/map.hpp"
@@ -21,6 +20,8 @@ namespace cv_bridge
 namespace fiducial_vlam
 {
   class FiducialMath;
+
+  class Observations;
 
 // ==============================================================================
 // Marker class
@@ -97,6 +98,8 @@ namespace fiducial_vlam
 
     std::unique_ptr<fiducial_vlam_msgs::msg::Map>
     to_map_msg(const std_msgs::msg::Header &header_msg, double marker_length);
+
+    std::vector<TransformWithCovariance> find_t_map_markers(const Observations &observations);
   };
 
 // ==============================================================================
@@ -110,7 +113,8 @@ namespace fiducial_vlam
   public:
     explicit Localizer(const std::unique_ptr<Map> &map);
 
-    TransformWithCovariance average_t_map_camera(Observations &observations,
+    TransformWithCovariance average_t_map_camera(const Observations &observations,
+                                                 const std::vector<TransformWithCovariance> &t_map_markers,
                                                  std::shared_ptr<cv_bridge::CvImage> &color_marked,
                                                  FiducialMath &fm);
   };

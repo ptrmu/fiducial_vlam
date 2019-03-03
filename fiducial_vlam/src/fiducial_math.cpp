@@ -1,6 +1,9 @@
 
 #include "fiducial_math.hpp"
 
+#include "observation.hpp"
+#include "transform_with_covariance.hpp"
+
 #include "cv_bridge/cv_bridge.h"
 #include "opencv2/aruco.hpp"
 #include "opencv2/calib3d/calib3d.hpp"

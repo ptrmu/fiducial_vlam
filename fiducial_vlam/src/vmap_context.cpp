@@ -1,6 +1,8 @@
 
 #include "vmap_context.hpp"
 
+#include "rclcpp/rclcpp.hpp"
+
 namespace fiducial_vlam
 {
   void VmapContext::load_parameters(rclcpp::Node &node)

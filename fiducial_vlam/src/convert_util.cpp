@@ -2,6 +2,8 @@
 
 #include "convert_util.hpp"
 
+#include "transform_with_covariance.hpp"
+
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/convert.h"
 

@@ -3,6 +3,7 @@
 
 #include "fiducial_math.hpp"
 #include "map.hpp"
+#include "observation.hpp"
 #include "vloc_context.hpp"
 
 #include "cv_bridge/cv_bridge.h"
@@ -106,8 +107,12 @@ namespace fiducial_vlam
       FiducialMath fm(*camera_info_);
 
       // Detect the markers in this image and create a list of
-      // observations.
+      // observations and then find t_map_marker for each detected
+      // marker. The t_map_markers has an entry for each element
+      // in observations. If the marker wasn't found in the map, then
+      // the t_map_marker entry has is_valid() as false.
       auto observations = fm.detect_markers(color, color_marked);
+      auto t_map_markers = map_->find_t_map_markers(observations);
 
       TransformWithCovariance t_map_camera;
 
@@ -125,7 +130,7 @@ namespace fiducial_vlam
 //        }
 
         // Find the camera pose from the observations.
-        t_map_camera = localizer_.average_t_map_camera(observations, color_marked, fm);
+        t_map_camera = localizer_.average_t_map_camera(observations, t_map_markers, color_marked, fm);
 
         if (t_map_camera.is_valid()) {
           // Publish the camera pose in the map frame
@@ -163,14 +168,6 @@ namespace fiducial_vlam
 
       // Publish an annotated image if requested
       if (color_marked) {
-
-        // The image can be annotated only if the camera pose is known.
-        // but the unannotated image should still be published.
-        if (t_map_camera.is_valid()) {
-          mark_image_with_marker_axes(t_map_camera, observations, color_marked, fm);
-        }
-
-        // Publish annotated image
         image_marked_pub_->publish(color->toImageMsg());
       }
     }
@@ -187,30 +184,6 @@ namespace fiducial_vlam
       tf_message.transforms.emplace_back(msg);
 
       tf_message_pub_->publish(tf_message);
-    }
-
-    void mark_image_with_marker_axes(const TransformWithCovariance &t_map_camera,
-                                     const Observations &observations,
-                                     std::shared_ptr<cv_bridge::CvImage> &color_marked,
-                                     FiducialMath &fm)
-    {
-      // Cache a transform.
-      auto tf_t_camera_map = t_map_camera.transform().inverse();
-
-      // Loop through the ids of the markers visible in this image
-      for (auto &obs : observations.observations()) {
-
-        // Find this marker in the map
-        auto marker_ptr = map_->find_marker(obs.id());
-        if (marker_ptr) {
-          auto &tf_t_map_marker = marker_ptr->t_map_marker().transform();
-
-          // Found a marker that is in the map and in the image. Calculate its
-          // transform to the camera frame and annotate the image.
-          auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * tf_t_map_marker);
-          fm.annotate_image_with_marker_axis(color_marked, t_camera_marker);
-        }
-      }
     }
   };
 }

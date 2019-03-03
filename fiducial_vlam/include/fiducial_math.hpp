@@ -4,9 +4,6 @@
 
 #include <array>
 
-#include "observation.hpp"
-#include "transform_with_covariance.hpp"
-
 #include "sensor_msgs/msg/camera_info.hpp"
 
 namespace cv_bridge
@@ -16,6 +13,11 @@ namespace cv_bridge
 
 namespace fiducial_vlam
 {
+  class Observation;
+
+  class Observations;
+
+  class TransformWithCovariance;
 
 // ==============================================================================
 // CameraInfo class

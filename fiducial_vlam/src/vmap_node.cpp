@@ -9,6 +9,7 @@
 
 #include "fiducial_math.hpp"
 #include "map.hpp"
+#include "observation.hpp"
 #include "vmap_context.hpp"
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -422,7 +423,8 @@ namespace fiducial_vlam
       }
 
       // Estimate the camera pose using the latest map estimate
-      auto t_map_camera = localizer_.average_t_map_camera(observations, color_marked, fm);
+      auto t_map_markers = map_->find_t_map_markers(observations);
+      auto t_map_camera = localizer_.average_t_map_camera(observations, t_map_markers, color_marked, fm);
 
       // We get an invalid pose if none of the visible markers pose's are known.
       if (t_map_camera.is_valid()) {

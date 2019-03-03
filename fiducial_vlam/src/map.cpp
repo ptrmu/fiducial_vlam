@@ -1,6 +1,8 @@
 
 #include "map.hpp"
+
 #include "fiducial_math.hpp"
+#include "observation.hpp"
 
 namespace fiducial_vlam
 {
@@ -93,6 +95,18 @@ namespace fiducial_vlam
     markers_.emplace(marker.id(), std::move(marker));
   }
 
+  std::vector<TransformWithCovariance> Map::find_t_map_markers(const Observations &observations)
+  {
+    std::vector<TransformWithCovariance> t_map_markers{};
+    t_map_markers.reserve(observations.size());
+    for (auto &obs: observations.observations()) {
+      auto marker_ptr = find_marker(obs.id());
+      t_map_markers.emplace_back(marker_ptr ? marker_ptr->t_map_marker() : TransformWithCovariance());
+    }
+    return t_map_markers;
+  }
+
+
 // ==============================================================================
 // Localizer class
 // ==============================================================================
@@ -102,7 +116,8 @@ namespace fiducial_vlam
   {
   }
 
-  TransformWithCovariance Localizer::average_t_map_camera(Observations &observations,
+  TransformWithCovariance Localizer::average_t_map_camera(const Observations &observations,
+                                                          const std::vector<TransformWithCovariance> &t_map_markers,
                                                           std::shared_ptr<cv_bridge::CvImage> &color_marked,
                                                           FiducialMath &fm)
   {
@@ -110,19 +125,18 @@ namespace fiducial_vlam
     int observations_count{0};
 
     // For each observation.
-    for (auto observation : observations.observations()) {
+    for (int i = 0; i < observations.size(); i += 1) {
+      auto &observation = observations.observations()[i];
+      auto &t_map_marker = t_map_markers[i];
 
-      // Find the marker with the same id
-      auto marker_ptr = map_->find_marker(observation.id());
-      if (marker_ptr) {
-        auto &marker = *marker_ptr;
+      if (t_map_marker.is_valid()) {
 
         // Find the camera marker transform
         auto t_camera_marker = fm.solve_t_camera_marker(observation, map_->marker_length());
 
         // The solvePnP function returns the marker in the camera frame: t_camera_marker
         auto tf2_t_marker_camera = t_camera_marker.transform().inverse();
-        auto tf2_t_map_camera = marker.t_map_marker().transform() * tf2_t_marker_camera;
+        auto tf2_t_map_camera = t_map_marker.transform() * tf2_t_marker_camera;
         TransformWithCovariance t_map_camera(tf2_t_map_camera);
 
         // Average this new measurement with the previous
@@ -132,6 +146,27 @@ namespace fiducial_vlam
         } else {
           average_t_map_camera.update_simple_average(t_map_camera, observations_count);
           observations_count += 1;
+        }
+      }
+    }
+
+    // Annotate the image by drawing axes on each marker that was used for the location
+    // calculation. This calculation uses the average t_map_camera and the t_map_markers
+    // to figure out where the axes should be. This is different from the t_camera_marker
+    // that was solved for above.
+    if (color_marked) {
+
+      // Cache a transform.
+      auto tf_t_camera_map = average_t_map_camera.transform().inverse();
+
+      // Loop through the ids of the markers visible in this image
+      for (int i = 0; i < observations.size(); i += 1) {
+        auto &t_map_marker = t_map_markers[i];
+
+        if (t_map_marker.is_valid()) {
+          // Calculalte t_camera_marker and draw the axis.
+          auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * t_map_marker.transform());
+          fm.annotate_image_with_marker_axis(color_marked, t_camera_marker);
         }
       }
     }
