@@ -1,5 +1,6 @@
 
 #include "map.hpp"
+#include "fiducial_math.hpp"
 
 namespace fiducial_vlam
 {
@@ -102,6 +103,7 @@ namespace fiducial_vlam
   }
 
   TransformWithCovariance Localizer::average_t_map_camera(Observations &observations,
+                                                          std::shared_ptr<cv_bridge::CvImage> &color_marked,
                                                           FiducialMath &fm)
   {
     TransformWithCovariance average_t_map_camera{};

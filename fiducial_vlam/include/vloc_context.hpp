@@ -40,6 +40,9 @@ namespace fiducial_vlam
   CXT_ELEM(               /* non-zero => publish the tf of the camera at every frame  */ \
   publish_tfs,  \
   1, int) \
+  CXT_ELEM(               /* non-zero => publish the image_marked at every frame  */ \
+  publish_image_marked,  \
+  1, int) \
   CXT_ELEM(               /* non-zero => debug mode, helpful for dealing with rviz when playing bags.  */ \
   stamp_msgs_with_current_time,  \
   0, int) \

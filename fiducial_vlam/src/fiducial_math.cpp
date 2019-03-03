@@ -1,6 +1,7 @@
 
 #include "fiducial_math.hpp"
 
+#include "cv_bridge/cv_bridge.h"
 #include "opencv2/aruco.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 
@@ -54,6 +55,56 @@ namespace fiducial_vlam
   {}
 
 // ==============================================================================
+// drawDetectedMarkers function
+// ==============================================================================
+
+  static void drawDetectedMarkers(cv::InputOutputArray image,
+                                  cv::InputArrayOfArrays corners,
+                                  cv::InputArray ids)
+  {
+    // calculate colors
+    auto borderColor = cv::Scalar(0, 255, 0);
+    cv::Scalar textColor = borderColor;
+    cv::Scalar cornerColor = borderColor;
+
+    std::swap(textColor.val[0], textColor.val[1]);     // text color just sawp G and R
+    std::swap(cornerColor.val[1], cornerColor.val[2]); // corner color just sawp G and B
+
+    int nMarkers = static_cast<int>(corners.total());
+    for (int i = 0; i < nMarkers; i++) {
+
+      cv::Mat currentMarker = corners.getMat(i);
+      CV_Assert(currentMarker.total() == 4 && currentMarker.type() == CV_32FC2);
+
+      // draw marker sides
+      for (int j = 0; j < 4; j++) {
+        cv::Point2f p0, p1;
+        p0 = currentMarker.ptr<cv::Point2f>(0)[j];
+        p1 = currentMarker.ptr<cv::Point2f>(0)[(j + 1) % 4];
+        line(image, p0, p1, borderColor, 1);
+      }
+
+      // draw first corner mark
+      rectangle(image,
+                currentMarker.ptr<cv::Point2f>(0)[0] - cv::Point2f(3, 3),
+                currentMarker.ptr<cv::Point2f>(0)[0] + cv::Point2f(3, 3),
+                cornerColor, 1, cv::LINE_AA);
+
+      // draw ID
+//      if (ids.total() != 0) {
+//        cv::Point2f cent(0, 0);
+//        for (int p = 0; p < 4; p++)
+//          cent += currentMarker.ptr<cv::Point2f>(0)[p];
+//
+//        cent = cent / 4.;
+//        std::stringstream s;
+//        s << "id=" << ids.getMat().ptr<int>(0)[i];
+//        putText(image, s.str(), cent, cv::FONT_HERSHEY_SIMPLEX, 0.5, textColor, 2);
+//      }
+
+    }
+  }
+// ==============================================================================
 // FiducialMath::CvFiducialMath class
 // ==============================================================================
 
@@ -90,7 +141,8 @@ namespace fiducial_vlam
       return TransformWithCovariance(to_tf2_transform(rvec, tvec));
     }
 
-    Observations detect_markers(cv_bridge::CvImagePtr &color)
+    Observations detect_markers(cv_bridge::CvImagePtr &color,
+                                std::shared_ptr<cv_bridge::CvImage> &color_marked)
     {
       // Todo: make the dictionary a parameter
       auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
@@ -106,17 +158,23 @@ namespace fiducial_vlam
       std::vector<std::vector<cv::Point2f>> corners;
       cv::aruco::detectMarkers(gray, dictionary, corners, ids, detectorParameters);
 
+      // Annotate the markers
+      if (color_marked) {
+        drawDetectedMarkers(color_marked->image, corners, ids);
+      }
+
       // return the corners as a list of observations
       return to_observations(ids, corners);
     }
 
-    void annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color, const TransformWithCovariance &t_camera_marker)
+    void annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                         const TransformWithCovariance &t_camera_marker)
     {
       cv::Vec3d rvec;
       cv::Vec3d tvec;
       to_cv_rvec_tvec(t_camera_marker, rvec, tvec);
 
-      cv::aruco::drawAxis(color->image,
+      cv::aruco::drawAxis(color_marked->image,
                           ci_.cv()->camera_matrix(), ci_.cv()->dist_coeffs(),
                           rvec, tvec, 0.1);
     }
@@ -229,14 +287,15 @@ namespace fiducial_vlam
     return cv_->solve_t_camera_marker(observation, marker_length);
   }
 
-  Observations FiducialMath::detect_markers(cv_bridge::CvImagePtr &color)
+  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,
+                                            std::shared_ptr<cv_bridge::CvImage> &color_marked)
   {
-    return cv_->detect_markers(color);
+    return cv_->detect_markers(color, color_marked);
   }
 
-  void FiducialMath::annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color,
+  void FiducialMath::annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color_marked,
                                                      const TransformWithCovariance &t_camera_marker)
   {
-    cv_->annotate_image_with_marker_axis(color, t_camera_marker);
+    cv_->annotate_image_with_marker_axis(color_marked, t_camera_marker);
   }
 }

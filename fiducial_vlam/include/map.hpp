@@ -4,7 +4,6 @@
 #include <map>
 
 #include "convert_util.hpp"
-#include "fiducial_math.hpp"
 #include "observation.hpp"
 #include "transform_with_covariance.hpp"
 
@@ -14,8 +13,15 @@
 //  t_destination_source is a transformation from source frame to destination frame
 //  xxx_f_destination means xxx is expressed in destination frame
 
+namespace cv_bridge
+{
+  class CvImage;
+}
+
 namespace fiducial_vlam
 {
+  class FiducialMath;
+
 // ==============================================================================
 // Marker class
 // ==============================================================================
@@ -85,7 +91,7 @@ namespace fiducial_vlam
     auto marker_length() const
     { return marker_length_; }
 
-    Marker * find_marker(int id);
+    Marker *find_marker(int id);
 
     void add_marker(Marker marker);
 
@@ -104,7 +110,9 @@ namespace fiducial_vlam
   public:
     explicit Localizer(const std::unique_ptr<Map> &map);
 
-    TransformWithCovariance average_t_map_camera(Observations &observations, FiducialMath &fm);
+    TransformWithCovariance average_t_map_camera(Observations &observations,
+                                                 std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                                 FiducialMath &fm);
   };
 
 // ==============================================================================

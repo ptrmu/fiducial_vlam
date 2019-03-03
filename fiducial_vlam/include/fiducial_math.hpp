@@ -7,11 +7,16 @@
 #include "observation.hpp"
 #include "transform_with_covariance.hpp"
 
-#include "cv_bridge/cv_bridge.h"
 #include "sensor_msgs/msg/camera_info.hpp"
+
+namespace cv_bridge
+{
+  class CvImage;
+}
 
 namespace fiducial_vlam
 {
+
 // ==============================================================================
 // CameraInfo class
 // ==============================================================================
@@ -51,9 +56,11 @@ namespace fiducial_vlam
 
     TransformWithCovariance solve_t_camera_marker(const Observation &observation, double marker_length);
 
-    Observations detect_markers(cv_bridge::CvImagePtr &color);
+    Observations detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,
+                                std::shared_ptr<cv_bridge::CvImage> &color_marked);
 
-    void annotate_image_with_marker_axis(cv_bridge::CvImagePtr &color, const TransformWithCovariance &t_camera_marker);
+    void annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color,
+                                         const TransformWithCovariance &t_camera_marker);
   };
 }
 

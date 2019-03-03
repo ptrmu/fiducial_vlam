@@ -94,11 +94,20 @@ namespace fiducial_vlam
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(image_msg);
 
+      // If we are going to publish an annotated image, make a copy of
+      // the pointer to color. If no annotated image is to be published,
+      // then just make an empty image pointer. The routines need to check
+      // that the pointer is valid before drawing into it.
+      cv_bridge::CvImagePtr color_marked;
+      if (cxt_.publish_image_marked_) {
+        color_marked = color;
+      }
+
       FiducialMath fm(*camera_info_);
 
       // Detect the markers in this image and create a list of
       // observations.
-      Observations observations(fm.detect_markers(color));
+      auto observations = fm.detect_markers(color, color_marked);
 
       TransformWithCovariance t_map_camera;
 
@@ -116,7 +125,7 @@ namespace fiducial_vlam
 //        }
 
         // Find the camera pose from the observations.
-        t_map_camera = localizer_.average_t_map_camera(observations, fm);
+        t_map_camera = localizer_.average_t_map_camera(observations, color_marked, fm);
 
         if (t_map_camera.is_valid()) {
           // Publish the camera pose in the map frame
@@ -142,40 +151,23 @@ namespace fiducial_vlam
               cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
               t_map_camera);
           }
-        }
 
-        // Publish the observations
-        auto observations_msg = observations.to_msg(
-          cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
-          image_msg.header.frame_id,
-          *camera_info_msg_);
-        observations_pub_->publish(observations_msg);
+          // Publish the observations
+          auto observations_msg = observations.to_msg(
+            cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
+            image_msg.header.frame_id,
+            *camera_info_msg_);
+          observations_pub_->publish(observations_msg);
+        }
       }
 
-      // Publish an annotated image
-      if (count_subscribers(image_marked_pub_->get_topic_name()) > 0) {
+      // Publish an annotated image if requested
+      if (color_marked) {
 
         // The image can be annotated only if the camera pose is known.
         // but the unannotated image should still be published.
         if (t_map_camera.is_valid()) {
-
-          // Cache a transform.
-          auto tf_t_camera_map = t_map_camera.transform().inverse();
-
-          // Loop through the ids of the markers visible in this image
-          for (auto &obs : observations.observations()) {
-
-            // Find this marker in the map
-            auto marker_ptr = map_->find_marker(obs.id());
-            if (marker_ptr) {
-              auto &tf_t_map_marker = marker_ptr->t_map_marker().transform();
-
-              // Found a marker that is in the map and in the image. Calculate its
-              // transform to the camera frame and annotate the image.
-              auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * tf_t_map_marker);
-              fm.annotate_image_with_marker_axis(color, t_camera_marker);
-            }
-          }
+          mark_image_with_marker_axes(t_map_camera, observations, color_marked, fm);
         }
 
         // Publish annotated image
@@ -195,6 +187,30 @@ namespace fiducial_vlam
       tf_message.transforms.emplace_back(msg);
 
       tf_message_pub_->publish(tf_message);
+    }
+
+    void mark_image_with_marker_axes(const TransformWithCovariance &t_map_camera,
+                                     const Observations &observations,
+                                     std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                     FiducialMath &fm)
+    {
+      // Cache a transform.
+      auto tf_t_camera_map = t_map_camera.transform().inverse();
+
+      // Loop through the ids of the markers visible in this image
+      for (auto &obs : observations.observations()) {
+
+        // Find this marker in the map
+        auto marker_ptr = map_->find_marker(obs.id());
+        if (marker_ptr) {
+          auto &tf_t_map_marker = marker_ptr->t_map_marker().transform();
+
+          // Found a marker that is in the map and in the image. Calculate its
+          // transform to the camera frame and annotate the image.
+          auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * tf_t_map_marker);
+          fm.annotate_image_with_marker_axis(color_marked, t_camera_marker);
+        }
+      }
     }
   };
 }

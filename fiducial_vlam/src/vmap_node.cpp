@@ -406,6 +406,7 @@ namespace fiducial_vlam
 
       CameraInfo ci{msg->camera_info};
       FiducialMath fm{ci};
+      std::shared_ptr<cv_bridge::CvImage> color_marked; //  No image to annotate
 
       // Get observations from the message.
       Observations observations(*msg);
@@ -421,7 +422,7 @@ namespace fiducial_vlam
       }
 
       // Estimate the camera pose using the latest map estimate
-      auto t_map_camera = localizer_.average_t_map_camera(observations, fm);
+      auto t_map_camera = localizer_.average_t_map_camera(observations, color_marked, fm);
 
       // We get an invalid pose if none of the visible markers pose's are known.
       if (t_map_camera.is_valid()) {
