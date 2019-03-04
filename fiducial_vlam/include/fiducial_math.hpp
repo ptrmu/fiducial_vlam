@@ -58,6 +58,10 @@ namespace fiducial_vlam
 
     TransformWithCovariance solve_t_camera_marker(const Observation &observation, double marker_length);
 
+    TransformWithCovariance solve_t_map_camera(const Observations &observations,
+                                               const std::vector<TransformWithCovariance> &t_map_markers,
+                                               double marker_length);
+
     Observations detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,
                                 std::shared_ptr<cv_bridge::CvImage> &color_marked);
 

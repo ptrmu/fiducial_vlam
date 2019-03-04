@@ -50,7 +50,7 @@ namespace fiducial_vlam
   1, int) \
   CXT_ELEM(               /* non-zero => debug mode, helpful for dealing with rviz when playing bags.  */ \
   stamp_msgs_with_current_time,  \
-  0, int) \
+  1, int) \
   /* End of list */
 
 #define CXT_MACRO_ALL_MEMBERS \

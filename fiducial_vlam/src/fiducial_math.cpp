@@ -129,12 +129,15 @@ namespace fiducial_vlam
       double marker_length)
     {
       // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
-      std::vector<cv::Point3d> all_corners_f_marker = corners_f_marker(marker_length);
-      std::vector<cv::Point2f> all_corners_f_image = corners_f_image(observation);
+      std::vector<cv::Point3d> corners_f_marker;
+      std::vector<cv::Point2f> corners_f_image;
+
+      append_corners_f_marker(corners_f_marker, marker_length);
+      append_corners_f_image(corners_f_image, observation);
 
       // Figure out image location.
       cv::Vec3d rvec, tvec;
-      cv::solvePnP(all_corners_f_marker, all_corners_f_image,
+      cv::solvePnP(corners_f_marker, corners_f_image,
                    ci_.cv()->camera_matrix(), ci_.cv()->dist_coeffs(),
                    rvec, tvec);
 
@@ -142,6 +145,61 @@ namespace fiducial_vlam
       // camera coordinate system". In this case the marker frame is the model coordinate system.
       // So rvec, tvec are the transformation t_camera_marker.
       return TransformWithCovariance(to_tf2_transform(rvec, tvec));
+    }
+
+    TransformWithCovariance solve_t_map_camera(const Observations &observations,
+                                               const std::vector<TransformWithCovariance> &t_map_markers,
+                                               double marker_length)
+    {
+      // Build up two lists of corner points: 2D in the image frame, 3D in the marker frame
+      std::vector<cv::Point3d> all_corners_f_map;
+      std::vector<cv::Point2f> all_corners_f_image;
+
+      for (int i = 0; i < observations.size(); i += 1) {
+        auto &observation = observations.observations()[i];
+        auto &t_map_marker = t_map_markers[i];
+        if (t_map_marker.is_valid()) {
+          append_corners_f_map(all_corners_f_map, t_map_marker, marker_length);
+          append_corners_f_image(all_corners_f_image, observation);
+        }
+      }
+
+      // Figure out camera location.
+      cv::Vec3d rvec, tvec;
+      cv::solvePnP(all_corners_f_map, all_corners_f_image,
+                   ci_.cv()->camera_matrix(), ci_.cv()->dist_coeffs(),
+                   rvec, tvec);
+
+      // For certain cases, there is a chance that the multi marker solvePnP will
+      // return the mirror of the correct solution. So try solvePn[Ransac as well.
+      if (all_corners_f_image.size() > 1 * 4 && all_corners_f_image.size() < 4 * 4) {
+        cv::Vec3d rvecRansac, tvecRansac;
+        cv::solvePnPRansac(all_corners_f_map, all_corners_f_image,
+                           ci_.cv()->camera_matrix(), ci_.cv()->dist_coeffs(),
+                           rvecRansac, tvecRansac);
+
+        // If the pose returned from the ransac version is very different from
+        // that returned from the normal version, then use the ransac results.
+        // solvePnp can sometimes pick up the wrong solution (a mirror solution).
+        // solvePnpRansac does a better job in that case. But solvePnp does a
+        // better job smoothing out image noise so it is prefered when it works.
+        if (std::abs(rvec[0] - rvecRansac[0]) > 0.5 ||
+            std::abs(rvec[1] - rvecRansac[1]) > 0.5 ||
+            std::abs(rvec[2] - rvecRansac[2]) > 0.5) {
+          rvec = rvecRansac;
+          tvec = tvecRansac;
+        }
+      }
+
+      if (tvec[0] < 0) { // specific tests for bad pose determination
+        int xxx = 9;
+      }
+
+      // rvec, tvec output from solvePnp "brings points from the model coordinate system to the
+      // camera coordinate system". In this case the map frame is the model coordinate system.
+      // So rvec, tvec are the transformation t_camera_map.
+      auto tf2_t_map_camera = to_tf2_transform(rvec, tvec).inverse();
+      return TransformWithCovariance(tf2_t_map_camera);
     }
 
     Observations detect_markers(cv_bridge::CvImagePtr &color,
@@ -183,47 +241,47 @@ namespace fiducial_vlam
     }
 
   private:
-//    std::vector<cv::Point3d> corners_f_map(const Marker &marker, double marker_length)
-//    {
-//      // Build up a list of the corner locations in the map frame.
-//      tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
-//      tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
-//      tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
-//      tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
-//
-//      auto t_map_marker_tf = marker.t_map_marker().transform();
-//      auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
-//      auto corner1_f_map = t_map_marker_tf * corner1_f_marker;
-//      auto corner2_f_map = t_map_marker_tf * corner2_f_marker;
-//      auto corner3_f_map = t_map_marker_tf * corner3_f_marker;
-//
-//      std::vector<cv::Point3d> corners_f_map;
-//      corners_f_map.emplace_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
-//      corners_f_map.emplace_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
-//      corners_f_map.emplace_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
-//      corners_f_map.emplace_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
-//
-//      return corners_f_map;
-//    }
-
-    std::vector<cv::Point3d> corners_f_marker(double marker_length)
+    void append_corners_f_map(std::vector<cv::Point3d> &corners_f_map,
+                              const TransformWithCovariance &t_map_marker,
+                              double marker_length)
     {
       // Build up a list of the corner locations in the map frame.
-      std::vector<cv::Point3d> corners_f_marker;
+      tf2::Vector3 corner0_f_marker(-marker_length / 2.f, marker_length / 2.f, 0.f);
+      tf2::Vector3 corner1_f_marker(marker_length / 2.f, marker_length / 2.f, 0.f);
+      tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
+      tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
+
+      auto t_map_marker_tf = t_map_marker.transform();
+      auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
+      auto corner1_f_map = t_map_marker_tf * corner1_f_marker;
+      auto corner2_f_map = t_map_marker_tf * corner2_f_marker;
+      auto corner3_f_map = t_map_marker_tf * corner3_f_marker;
+
+      corners_f_map.emplace_back(cv::Point3d(corner0_f_map.x(), corner0_f_map.y(), corner0_f_map.z()));
+      corners_f_map.emplace_back(cv::Point3d(corner1_f_map.x(), corner1_f_map.y(), corner1_f_map.z()));
+      corners_f_map.emplace_back(cv::Point3d(corner2_f_map.x(), corner2_f_map.y(), corner2_f_map.z()));
+      corners_f_map.emplace_back(cv::Point3d(corner3_f_map.x(), corner3_f_map.y(), corner3_f_map.z()));
+    }
+
+    void append_corners_f_marker(std::vector<cv::Point3d> &corners_f_marker, double marker_length)
+    {
+      // Add to the list of the corner locations in the map frame.
       corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, marker_length / 2.f, 0.f));
       corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, marker_length / 2.f, 0.f));
       corners_f_marker.emplace_back(cv::Point3d(marker_length / 2.f, -marker_length / 2.f, 0.f));
       corners_f_marker.emplace_back(cv::Point3d(-marker_length / 2.f, -marker_length / 2.f, 0.f));
-      return corners_f_marker;
     }
 
-    std::vector<cv::Point2f> corners_f_image(const Observation &observation)
+    void append_corners_f_image(std::vector<cv::Point2f> &corners_f_image, const Observation &observation)
     {
-      return std::vector<cv::Point2f>{
-        cv::Point2f(observation.x0(), observation.y0()),
-        cv::Point2f(observation.x1(), observation.y1()),
-        cv::Point2f(observation.x2(), observation.y2()),
-        cv::Point2f(observation.x3(), observation.y3())};
+      corners_f_image.emplace_back(
+        cv::Point2f(static_cast<float>(observation.x0()), static_cast<float>(observation.y0())));
+      corners_f_image.emplace_back(
+        cv::Point2f(static_cast<float>(observation.x1()), static_cast<float>(observation.y1())));
+      corners_f_image.emplace_back(
+        cv::Point2f(static_cast<float>(observation.x2()), static_cast<float>(observation.y2())));
+      corners_f_image.emplace_back(
+        cv::Point2f(static_cast<float>(observation.x3()), static_cast<float>(observation.y3())));
     };
 
     Observations to_observations(const std::vector<int> &ids, const std::vector<std::vector<cv::Point2f>> &corners)
@@ -288,6 +346,13 @@ namespace fiducial_vlam
     double marker_length)
   {
     return cv_->solve_t_camera_marker(observation, marker_length);
+  }
+
+  TransformWithCovariance FiducialMath::solve_t_map_camera(const Observations &observations,
+                                                           const std::vector<TransformWithCovariance> &t_map_markers,
+                                                           double marker_length)
+  {
+    return cv_->solve_t_map_camera(observations, t_map_markers, marker_length);
   }
 
   Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,

@@ -117,6 +117,11 @@ namespace fiducial_vlam
                                                  const std::vector<TransformWithCovariance> &t_map_markers,
                                                  std::shared_ptr<cv_bridge::CvImage> &color_marked,
                                                  FiducialMath &fm);
+
+    TransformWithCovariance simultaneous_t_map_camera(const Observations &observations,
+                                                      const std::vector<TransformWithCovariance> &t_map_markers,
+                                                      std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                                      FiducialMath &fm);
   };
 
 // ==============================================================================

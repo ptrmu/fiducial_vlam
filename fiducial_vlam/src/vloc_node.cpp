@@ -130,7 +130,8 @@ namespace fiducial_vlam
 //        }
 
         // Find the camera pose from the observations.
-        t_map_camera = localizer_.average_t_map_camera(observations, t_map_markers, color_marked, fm);
+//        t_map_camera = localizer_.average_t_map_camera(observations, t_map_markers, color_marked, fm);
+        t_map_camera = localizer_.simultaneous_t_map_camera(observations, t_map_markers, color_marked, fm);
 
         if (t_map_camera.is_valid()) {
           // Publish the camera pose in the map frame
@@ -150,7 +151,7 @@ namespace fiducial_vlam
           camera_pose_pub_->publish(cam_pose_f_map);
 
           // Also publish the camera's tf
-          // todo: give the tf a frame_id based on the camera id.
+          // todo: give the tf a child_frame_id based on the camera id.
           if (cxt_.publish_tfs_) {
             publish_camera_tf(
               cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),

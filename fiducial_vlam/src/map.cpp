@@ -111,6 +111,33 @@ namespace fiducial_vlam
 // Localizer class
 // ==============================================================================
 
+  static void annotate_image_with_marker_axes(std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                              const TransformWithCovariance &t_map_camera,
+                                              const std::vector<TransformWithCovariance> &t_map_markers,
+                                              FiducialMath &fm)
+  {
+    // Annotate the image by drawing axes on each marker that was used for the location
+    // calculation. This calculation uses the average t_map_camera and the t_map_markers
+    // to figure out where the axes should be. This is different from the t_camera_marker
+    // that was solved for above.
+    if (color_marked && t_map_camera.is_valid()) {
+
+      // Cache a transform.
+      auto tf_t_camera_map = t_map_camera.transform().inverse();
+
+      // Loop through the ids of the markers visible in this image
+      for (int i = 0; i < t_map_markers.size(); i += 1) {
+        auto &t_map_marker = t_map_markers[i];
+
+        if (t_map_marker.is_valid()) {
+          // Calculalte t_camera_marker and draw the axis.
+          auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * t_map_marker.transform());
+          fm.annotate_image_with_marker_axis(color_marked, t_camera_marker);
+        }
+      }
+    }
+  }
+
   Localizer::Localizer(const std::unique_ptr<Map> &map)
     : map_(map)
   {
@@ -150,28 +177,21 @@ namespace fiducial_vlam
       }
     }
 
-    // Annotate the image by drawing axes on each marker that was used for the location
-    // calculation. This calculation uses the average t_map_camera and the t_map_markers
-    // to figure out where the axes should be. This is different from the t_camera_marker
-    // that was solved for above.
-    if (color_marked) {
-
-      // Cache a transform.
-      auto tf_t_camera_map = average_t_map_camera.transform().inverse();
-
-      // Loop through the ids of the markers visible in this image
-      for (int i = 0; i < observations.size(); i += 1) {
-        auto &t_map_marker = t_map_markers[i];
-
-        if (t_map_marker.is_valid()) {
-          // Calculalte t_camera_marker and draw the axis.
-          auto t_camera_marker = TransformWithCovariance(tf_t_camera_map * t_map_marker.transform());
-          fm.annotate_image_with_marker_axis(color_marked, t_camera_marker);
-        }
-      }
-    }
+    annotate_image_with_marker_axes(color_marked, average_t_map_camera, t_map_markers, fm);
 
     return average_t_map_camera;
+  }
+
+  TransformWithCovariance Localizer::simultaneous_t_map_camera(const Observations &observations,
+                                                               const std::vector<TransformWithCovariance> &t_map_markers,
+                                                               std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                                               FiducialMath &fm)
+  {
+    auto t_map_camera = fm.solve_t_map_camera(observations, t_map_markers, map_->marker_length());
+
+    annotate_image_with_marker_axes(color_marked, t_map_camera, t_map_markers, fm);
+
+    return t_map_camera;
   }
 
 // ==============================================================================
