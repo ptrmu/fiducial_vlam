@@ -1,2 +1,2 @@
 # fiducial_vlam
-![rviz image](images/rviz_in_out.png)
+![rviz image](images/rviz_in_out_path.png)
