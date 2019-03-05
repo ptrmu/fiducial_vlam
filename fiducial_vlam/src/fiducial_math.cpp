@@ -164,6 +164,12 @@ namespace fiducial_vlam
         }
       }
 
+      // If there are no known markers in the observation set, then don't
+      // try to find the camera position
+      if (all_corners_f_map.size() < 1) {
+        return TransformWithCovariance{};
+      }
+
       // Figure out camera location.
       cv::Vec3d rvec, tvec;
       cv::solvePnP(all_corners_f_map, all_corners_f_image,

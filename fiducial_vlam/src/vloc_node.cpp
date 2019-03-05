@@ -7,6 +7,7 @@
 #include "vloc_context.hpp"
 
 #include "cv_bridge/cv_bridge.h"
+#include "nav_msgs/msg/odometry.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_msgs/msg/tf_message.hpp"
 
@@ -25,10 +26,11 @@ namespace fiducial_vlam
     std::unique_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
     Localizer localizer_{map_};
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_{};
     rclcpp::Publisher<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_pub_{};
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_{};
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_{};
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_{};
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr camera_odometry_pub_{};
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_marked_pub_{};
 
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_raw_sub_;
@@ -43,15 +45,23 @@ namespace fiducial_vlam
       cxt_.load_parameters(*this);
 
       // ROS publishers. Initialize after parameters have been loaded.
-      camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        cxt_.camera_pose_pub_topic_, 16);
       observations_pub_ = create_publisher<fiducial_vlam_msgs::msg::Observations>(
         cxt_.fiducial_observations_pub_topic_, 16);
-      image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>(
-        cxt_.image_marked_pub_topic_, 16);
 
+      if (cxt_.publish_pose_) {
+        camera_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+          cxt_.camera_pose_pub_topic_, 16);
+      }
       if (cxt_.publish_tfs_) {
         tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+      }
+      if (cxt_.publish_odom_) {
+        camera_odometry_pub_ = create_publisher<nav_msgs::msg::Odometry>(
+          cxt_.camera_odometry_pub_topic_, 16);
+      }
+      if (cxt_.publish_image_marked_) {
+        image_marked_pub_ = create_publisher<sensor_msgs::msg::Image>(
+          cxt_.image_marked_pub_topic_, 16);
       }
 
       // ROS subscriptions
@@ -95,6 +105,11 @@ namespace fiducial_vlam
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(image_msg);
 
+      // the stamp to use for all published messages from this image.
+      auto stamp = cxt_.stamp_msgs_with_current_time_
+                   ? static_cast<std_msgs::msg::Header::_stamp_type>(now())
+                   : image_msg.header.stamp;
+
       // If we are going to publish an annotated image, make a copy of
       // the pointer to color. If no annotated image is to be published,
       // then just make an empty image pointer. The routines need to check
@@ -130,39 +145,33 @@ namespace fiducial_vlam
 //        }
 
         // Find the camera pose from the observations.
-//        t_map_camera = localizer_.average_t_map_camera(observations, t_map_markers, color_marked, fm);
         t_map_camera = localizer_.simultaneous_t_map_camera(observations, t_map_markers, color_marked, fm);
 
         if (t_map_camera.is_valid()) {
-          // Publish the camera pose in the map frame
-          auto t_map_camera_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, image_msg.header);
 
-          // for now just publish a pose message not a pose
-          geometry_msgs::msg::PoseWithCovarianceStamped cam_pose_f_map;
-          cam_pose_f_map.pose.pose = t_map_camera_msg.pose.pose;
-          cam_pose_f_map.header = image_msg.header;
-          cam_pose_f_map.header.frame_id = cxt_.map_frame_id_;
-          cam_pose_f_map.pose.covariance[0] = 6e-3;
-          cam_pose_f_map.pose.covariance[7] = 6e-3;
-          cam_pose_f_map.pose.covariance[14] = 6e-3;
-          cam_pose_f_map.pose.covariance[21] = 2e-3;
-          cam_pose_f_map.pose.covariance[28] = 2e-3;
-          cam_pose_f_map.pose.covariance[35] = 2e-3;
-          camera_pose_pub_->publish(cam_pose_f_map);
+          // Publish the camera pose in the map frame
+          if (cxt_.publish_pose_) {
+            auto t_map_camera_msg = to_PoseWithCovarianceStamped_msg(t_map_camera, stamp, cxt_.map_frame_id_);
+            // add some fixed variance for now.
+            add_fixed_covariance(t_map_camera_msg.pose);
+            camera_pose_pub_->publish(t_map_camera_msg);
+          }
+
+          // Publish odometry of the camera
+          if (cxt_.publish_odom_) {
+            auto odom_msg = to_odom_message(stamp, t_map_camera);
+            add_fixed_covariance(odom_msg.pose);
+            camera_odometry_pub_->publish(odom_msg);
+          }
 
           // Also publish the camera's tf
-          // todo: give the tf a child_frame_id based on the camera id.
           if (cxt_.publish_tfs_) {
-            publish_camera_tf(
-              cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
-              t_map_camera);
+            auto tf_message = to_tf_message(stamp, t_map_camera);
+            tf_message_pub_->publish(tf_message);
           }
 
           // Publish the observations
-          auto observations_msg = observations.to_msg(
-            cxt_.stamp_msgs_with_current_time_ ? now() : static_cast<rclcpp::Time>(image_msg.header.stamp),
-            image_msg.header.frame_id,
-            *camera_info_msg_);
+          auto observations_msg = observations.to_msg(stamp, image_msg.header.frame_id, *camera_info_msg_);
           observations_pub_->publish(observations_msg);
         }
       }
@@ -173,7 +182,20 @@ namespace fiducial_vlam
       }
     }
 
-    void publish_camera_tf(std_msgs::msg::Header::_stamp_type stamp, const TransformWithCovariance &t_map_camera)
+    nav_msgs::msg::Odometry to_odom_message(std_msgs::msg::Header::_stamp_type stamp,
+                                            const TransformWithCovariance &t_map_camera)
+    {
+      nav_msgs::msg::Odometry odom_message;
+
+      odom_message.header.stamp = stamp;
+      odom_message.header.frame_id = cxt_.map_frame_id_;
+      odom_message.child_frame_id = cxt_.camera_frame_id_;
+      odom_message.pose = to_PoseWithCovariance_msg(t_map_camera);
+      return odom_message;
+    }
+
+    tf2_msgs::msg::TFMessage to_tf_message(std_msgs::msg::Header::_stamp_type stamp,
+                                           const TransformWithCovariance &t_map_camera)
     {
       tf2_msgs::msg::TFMessage tf_message;
 
@@ -183,8 +205,18 @@ namespace fiducial_vlam
       msg.child_frame_id = cxt_.camera_frame_id_;
       msg.transform = tf2::toMsg(t_map_camera.transform());
       tf_message.transforms.emplace_back(msg);
+      return tf_message;
+    }
 
-      tf_message_pub_->publish(tf_message);
+    void add_fixed_covariance(geometry_msgs::msg::PoseWithCovariance &pwc)
+    {
+      // A hack for now.
+      pwc.covariance[0] = 6e-3;
+      pwc.covariance[7] = 6e-3;
+      pwc.covariance[14] = 6e-3;
+      pwc.covariance[21] = 2e-3;
+      pwc.covariance[28] = 2e-3;
+      pwc.covariance[35] = 2e-3;
     }
   };
 }

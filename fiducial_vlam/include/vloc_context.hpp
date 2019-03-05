@@ -21,6 +21,9 @@ namespace fiducial_vlam
   CXT_ELEM(               /* topic for publishing camera pose  */ \
   camera_pose_pub_topic,  \
   "camera_pose", std::string) \
+  CXT_ELEM(               /* topic for publishing camera odometry  */ \
+  camera_odometry_pub_topic,  \
+  "camera_odom", std::string) \
   CXT_ELEM(               /* topic for republishing the image with axes added to fiducial markers  */\
   image_marked_pub_topic,  \
   "image_marked", std::string) \
@@ -42,8 +45,14 @@ namespace fiducial_vlam
   camera_frame_id,  \
   "camera", std::string) \
   \
+  CXT_ELEM(               /* non-zero => publish the pose of the camera at every frame  */ \
+  publish_pose,  \
+  1, int) \
   CXT_ELEM(               /* non-zero => publish the tf of the camera at every frame  */ \
   publish_tfs,  \
+  1, int) \
+  CXT_ELEM(               /* non-zero => publish the odometry of the camera at every frame  */ \
+  publish_odom,  \
   1, int) \
   CXT_ELEM(               /* non-zero => publish the image_marked at every frame  */ \
   publish_image_marked,  \

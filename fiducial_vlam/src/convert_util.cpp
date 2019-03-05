@@ -25,10 +25,13 @@ namespace fiducial_vlam
   }
 
   geometry_msgs::msg::PoseWithCovarianceStamped to_PoseWithCovarianceStamped_msg(
-    const TransformWithCovariance &twc, const std_msgs::msg::Header &header)
+    const TransformWithCovariance &twc,
+    std_msgs::msg::Header::_stamp_type stamp,
+    std_msgs::msg::Header::_frame_id_type frame_id)
   {
     geometry_msgs::msg::PoseWithCovarianceStamped msg;
-    msg.header = header;
+    msg.header.stamp = stamp;
+    msg.header.frame_id = frame_id;
     msg.pose = to_PoseWithCovariance_msg(twc);
     return msg;
   }

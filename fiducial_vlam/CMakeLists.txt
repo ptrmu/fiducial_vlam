@@ -29,6 +29,7 @@ find_package(fiducial_vlam_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
@@ -40,6 +41,7 @@ include_directories(
   include
   ${fiducial_vlam_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
+  ${nav_msgs_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
   ${tf2_msgs_INCLUDE_DIRS}
@@ -74,6 +76,7 @@ ament_target_dependencies(vloc_node
   fiducial_vlam_msgs
   OpenCV
   rclcpp
+  nav_msgs
   sensor_msgs
   std_msgs
   tf2_msgs
