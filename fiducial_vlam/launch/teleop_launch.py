@@ -9,7 +9,6 @@ from launch.actions import ExecuteProcess
 
 
 def generate_launch_description():
-    urdf = os.path.join(get_package_share_directory('flock2'), 'urdf', 'tello.urdf')
     return LaunchDescription([
         # ExecuteProcess(cmd=['rviz2', '-d', 'src/fiducial_vlam/fiducial_vlam/cfg/default.rviz'], output='screen'),
         ExecuteProcess(cmd=['rviz2'], output='screen'),
