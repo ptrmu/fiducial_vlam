@@ -10,5 +10,5 @@ sys.path.append(get_package_share_directory('fiducial_vlam') + '/launch/')
 import dual_launch_two
 
 def generate_launch_description():
-    action_list = dual_launch_two.generate_main_action_list('drone1')
+    action_list = dual_launch_two.generate_primary_action_list('drone1', 'xps')
     return LaunchDescription(action_list)
