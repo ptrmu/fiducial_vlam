@@ -178,7 +178,9 @@ namespace fiducial_vlam
 
       // Publish an annotated image if requested
       if (color_marked) {
-        image_marked_pub_->publish(color->toImageMsg());
+        auto marked_image_msg {color->toImageMsg()};
+        marked_image_msg->header = image_msg.header;
+        image_marked_pub_->publish(marked_image_msg);
       }
     }
 
