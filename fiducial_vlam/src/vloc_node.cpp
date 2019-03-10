@@ -53,7 +53,8 @@ namespace fiducial_vlam
           cxt_.camera_pose_pub_topic_, 16);
       }
       if (cxt_.publish_tfs_) {
-        tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>("tf", 16);
+        tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>(
+          cxt_.camera_tf_pub_topic_, 16);
       }
       if (cxt_.publish_odom_) {
         camera_odometry_pub_ = create_publisher<nav_msgs::msg::Odometry>(

@@ -24,6 +24,9 @@ namespace fiducial_vlam
   CXT_ELEM(               /* topic for publishing camera odometry  */ \
   camera_odometry_pub_topic,  \
   "camera_odom", std::string) \
+  CXT_ELEM(               /* topic for publishing camera transform */ \
+  camera_tf_pub_topic,  \
+  "tf", std::string) \
   CXT_ELEM(               /* topic for republishing the image with axes added to fiducial markers  */\
   image_marked_pub_topic,  \
   "image_marked", std::string) \
