@@ -1,10 +1,15 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
+
+_launch_path = os.path.join(get_package_share_directory('fiducial_vlam'), 'launch')
+_map_filename = os.path.join(_launch_path, 'fiducial_marker_locations_basement.yaml')
 
 
 def generate_rviz_execute_process(computer_name):
     return ExecuteProcess(cmd=['rviz2', '-d',
-                               'install/fiducial_vlam/share/fiducial_vlam/launch/pair_' + computer_name + '.rviz'],
+                               os.path.join(_launch_path, 'pair_' + computer_name + '.rviz')],
                           output='screen')
 
 
@@ -29,7 +34,11 @@ def generate_primary_action_list(drone_name, computer_name):
 
     main_actions = [
         generate_rviz_execute_process(computer_name),
-        Node(package='fiducial_vlam', node_executable='vmap_node', output='screen'),
+        Node(package='fiducial_vlam', node_executable='vmap_node', output='screen',
+             node_name='vmap_node', parameters=[{
+                'make_not_use_map': 0,
+                'marker_map_load_full_filename': _map_filename
+            }]),
     ]
 
     return drone_actions + main_actions
