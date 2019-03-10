@@ -3,13 +3,13 @@
 echo Starting flight pattern
 
 function topic() {
-ros2 topic pub -1 /drone1/cmd_vel geometry_msgs/Twist "{linear: {$1}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
-#ros2 topic pub -1 /drone2/cmd_vel geometry_msgs/Twist "{linear: {$1}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+#ros2 topic pub -1 /drone1/cmd_vel geometry_msgs/Twist "{linear: {$1}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+ros2 topic pub -1 /drone2/cmd_vel geometry_msgs/Twist "{linear: {$1}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
 }
 
 function cmd() {
-ros2 service call /drone1/tello_action tello_msgs/TelloAction "{cmd: '$1'}"
-#ros2 service call /drone2/tello_action tello_msgs/TelloAction "{cmd: '$1'}"
+#ros2 service call /drone1/tello_action tello_msgs/TelloAction "{cmd: '$1'}"
+ros2 service call /drone2/tello_action tello_msgs/TelloAction "{cmd: '$1'}"
 sleep $2
 }
 
@@ -32,7 +32,7 @@ echo start
 cmd "takeoff" 5
 
 move_stop "x: 0.0, y: 0.0, z: 0.15" 0.0
-move_stop "x: 0.15, y: 0.0, z: 0.0" 0.0
+move_stop "x: 0.15, y: 0.0, z: 0.0" 0.1
 
 echo continue
 
