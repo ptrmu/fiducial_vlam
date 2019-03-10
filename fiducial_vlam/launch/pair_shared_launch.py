@@ -1,11 +1,15 @@
-import os
-
-from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 
-# supported names are tello, drone1, drone2
+
+def generate_rviz_execute_process(computer_name):
+    return ExecuteProcess(cmd=['rviz2', '-d',
+                               'install/fiducial_vlam/share/fiducial_vlam/launch/pair_' + computer_name + '.rviz'],
+                          output='screen')
+
+
 def generate_one_drone_action_list(drone_name):
+    # supported names are tello, drone1, drone2
     # urdf = os.path.join(get_package_share_directory('flock2'), 'urdf', drone_name + '.urdf')
     ns = drone_name
 
@@ -24,8 +28,7 @@ def generate_primary_action_list(drone_name, computer_name):
     drone_actions = generate_one_drone_action_list(drone_name)
 
     main_actions = [
-        ExecuteProcess(cmd=['rviz2', '-d', 'install/fiducial_vlam/share/fiducial_vlam/launch/dual_' + computer_name + '.rviz'],
-                       output='screen'),
+        generate_rviz_execute_process(computer_name),
         Node(package='fiducial_vlam', node_executable='vmap_node', output='screen'),
     ]
 
@@ -36,10 +39,7 @@ def generate_secondary_action_list(drone_name, computer_name):
     drone_actions = generate_one_drone_action_list(drone_name)
 
     main_actions = [
-        ExecuteProcess(cmd=['rviz2', '-d', 'install/fiducial_vlam/share/fiducial_vlam/launch/dual_' + computer_name + '.rviz'],
-                       output='screen'),
+        generate_rviz_execute_process(computer_name),
     ]
 
     return drone_actions + main_actions
-
-
