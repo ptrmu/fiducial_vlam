@@ -54,7 +54,7 @@ namespace fiducial_vlam
       }
       if (cxt_.publish_tfs_) {
         tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>(
-          cxt_.camera_tf_pub_topic_, 16);
+          "/tf", 16);
       }
       if (cxt_.publish_odom_) {
         camera_odometry_pub_ = create_publisher<nav_msgs::msg::Odometry>(
@@ -179,7 +179,7 @@ namespace fiducial_vlam
 
       // Publish an annotated image if requested
       if (color_marked) {
-        auto marked_image_msg {color->toImageMsg()};
+        auto marked_image_msg{color->toImageMsg()};
         marked_image_msg->header = image_msg.header;
         image_marked_pub_->publish(marked_image_msg);
       }
@@ -208,6 +208,13 @@ namespace fiducial_vlam
       msg.child_frame_id = cxt_.camera_frame_id_;
       msg.transform = tf2::toMsg(t_map_camera.transform());
       tf_message.transforms.emplace_back(msg);
+
+      if (cxt_.base_frame_id_.size()) {
+        msg.child_frame_id = cxt_.base_frame_id_;
+        msg.transform = tf2::toMsg(t_map_camera.transform() * cxt_.t_camera_base_.transform());
+        tf_message.transforms.emplace_back(msg);
+      }
+
       return tf_message;
     }
 

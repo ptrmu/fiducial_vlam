@@ -4,6 +4,7 @@
 #include <string>
 
 #include "context_macros.hpp"
+#include "transform_with_covariance.hpp"
 
 namespace rclcpp
 {
@@ -12,8 +13,6 @@ namespace rclcpp
 
 namespace fiducial_vlam
 {
-  class TransformWithCovariance;
-
 #define CXT_MACRO_ALL_PARAMS \
   CXT_ELEM(               /* topic for publishing fiducial observations  */ \
   fiducial_observations_pub_topic,  \
@@ -24,9 +23,6 @@ namespace fiducial_vlam
   CXT_ELEM(               /* topic for publishing camera odometry  */ \
   camera_odometry_pub_topic,  \
   "camera_odom", std::string) \
-  CXT_ELEM(               /* topic for publishing camera transform */ \
-  camera_tf_pub_topic,  \
-  "tf", std::string) \
   CXT_ELEM(               /* topic for republishing the image with axes added to fiducial markers  */\
   image_marked_pub_topic,  \
   "image_marked", std::string) \
@@ -44,7 +40,7 @@ namespace fiducial_vlam
   CXT_ELEM(               /* frame_id for camera pose and tf messages - normally "map"  */ \
   map_frame_id,  \
   "map", std::string) \
-  CXT_ELEM(               /* frame_id for the child in the tf message  */\
+  CXT_ELEM(               /* frame_id for the child in the camera tf message  */\
   camera_frame_id,  \
   "camera", std::string) \
   \
@@ -63,9 +59,34 @@ namespace fiducial_vlam
   CXT_ELEM(               /* non-zero => debug mode, helpful for dealing with rviz when playing bags.  */ \
   stamp_msgs_with_current_time,  \
   1, int) \
+  \
+  CXT_ELEM(               /* frame_id for the child in the base_link tf message  */\
+  base_frame_id,  \
+  "base_link", std::string) \
+  CXT_ELEM(               /* camera=>baselink transform component */ \
+  map_init_pose_x,  \
+  0., double) \
+  CXT_ELEM(               /* camera=>baselink transform component */ \
+  map_init_pose_y,  \
+  0., double) \
+  CXT_ELEM(               /* camera=>baselink transform component */ \
+  map_init_pose_z, \
+  -0.01, double) \
+  CXT_ELEM(               /* camera=>baselink transform component */ \
+  map_init_pose_roll, \
+  TF2SIMD_HALF_PI, double) \
+  CXT_ELEM(               /* camera=>baselink transform component */ \
+  map_init_pose_pitch,  \
+  -TF2SIMD_HALF_PI, double) \
+  CXT_ELEM(               /* camera=>baselink transform component */ \
+  map_init_pose_yaw, \
+  0., double) \
   /* End of list */
 
 #define CXT_MACRO_ALL_MEMBERS \
+  CXT_MEMBER(             /* transform from base frame to camera frame */ \
+  t_camera_base,  \
+  TransformWithCovariance) \
   /* End of list */
 
   struct VlocContext

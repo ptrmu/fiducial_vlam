@@ -11,8 +11,6 @@ namespace rclcpp
 
 namespace fiducial_vlam
 {
-  class TransformWithCovariance;
-
 #define CXT_MACRO_ALL_PARAMS \
   CXT_ELEM(               /* topic for publishing map of markers  */ \
   fiducial_map_pub_topic,  \
