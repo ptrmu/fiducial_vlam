@@ -19,8 +19,8 @@ namespace fiducial_vlam
   void VlocContext::validate_parameters()
   {
     t_camera_base_ = TransformWithCovariance(TransformWithCovariance::mu_type{
-      map_init_pose_x_, map_init_pose_y_, map_init_pose_z_,
-      map_init_pose_roll_, map_init_pose_pitch_, map_init_pose_yaw_});
+      t_camera_base_x_, t_camera_base_y_, t_camera_base_z_,
+      t_camera_base_roll_, t_camera_base_pitch_, t_camera_base_yaw_});
   }
 }
 

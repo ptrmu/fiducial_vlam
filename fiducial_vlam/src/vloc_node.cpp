@@ -158,11 +158,21 @@ namespace fiducial_vlam
             camera_pose_pub_->publish(t_map_camera_msg);
           }
 
-          // Publish odometry of the camera
+          // Publish odometry of the camera and/or the base.
+          // The camera_frame_id parameter is non-empty to publish the camera odometry.
+          // The base_frame_id parameter is non-empty to publish the base odometry.
           if (cxt_.publish_odom_) {
-            auto odom_msg = to_odom_message(stamp, t_map_camera);
-            add_fixed_covariance(odom_msg.pose);
-            camera_odometry_pub_->publish(odom_msg);
+            if (cxt_.camera_frame_id_.size()) {
+              auto odom_msg = to_odom_message(stamp, t_map_camera);
+              add_fixed_covariance(odom_msg.pose);
+              camera_odometry_pub_->publish(odom_msg);
+            }
+            if (cxt_.base_frame_id_.size()) {
+              TransformWithCovariance t_map_base(t_map_camera.transform() * cxt_.t_camera_base_.transform());
+              auto odom_msg = to_odom_message(stamp, t_map_base);
+              add_fixed_covariance(odom_msg.pose);
+              camera_odometry_pub_->publish(odom_msg);
+            }
           }
 
           // Also publish the camera's tf
@@ -186,14 +196,14 @@ namespace fiducial_vlam
     }
 
     nav_msgs::msg::Odometry to_odom_message(std_msgs::msg::Header::_stamp_type stamp,
-                                            const TransformWithCovariance &t_map_camera)
+                                            const TransformWithCovariance &t)
     {
       nav_msgs::msg::Odometry odom_message;
 
       odom_message.header.stamp = stamp;
       odom_message.header.frame_id = cxt_.map_frame_id_;
       odom_message.child_frame_id = cxt_.camera_frame_id_;
-      odom_message.pose = to_PoseWithCovariance_msg(t_map_camera);
+      odom_message.pose = to_PoseWithCovariance_msg(t);
       return odom_message;
     }
 
@@ -205,10 +215,14 @@ namespace fiducial_vlam
       geometry_msgs::msg::TransformStamped msg;
       msg.header.stamp = stamp;
       msg.header.frame_id = cxt_.map_frame_id_;
-      msg.child_frame_id = cxt_.camera_frame_id_;
-      msg.transform = tf2::toMsg(t_map_camera.transform());
-      tf_message.transforms.emplace_back(msg);
 
+      // The camera_frame_id parameter is non-empty to publish the camera tf.
+      // The base_frame_id parameter is non-empty to publish the base tf.
+      if (cxt_.camera_frame_id_.size()) {
+        msg.child_frame_id = cxt_.camera_frame_id_;
+        msg.transform = tf2::toMsg(t_map_camera.transform());
+        tf_message.transforms.emplace_back(msg);
+      }
       if (cxt_.base_frame_id_.size()) {
         msg.child_frame_id = cxt_.base_frame_id_;
         msg.transform = tf2::toMsg(t_map_camera.transform() * cxt_.t_camera_base_.transform());

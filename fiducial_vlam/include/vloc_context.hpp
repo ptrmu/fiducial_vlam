@@ -64,22 +64,22 @@ namespace fiducial_vlam
   base_frame_id,  \
   "base_link", std::string) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
-  map_init_pose_x,  \
+  t_camera_base_x,  \
   0., double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
-  map_init_pose_y,  \
+  t_camera_base_y,  \
   0., double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
-  map_init_pose_z, \
+  t_camera_base_z, \
   -0.01, double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
-  map_init_pose_roll, \
+  t_camera_base_roll, \
   TF2SIMD_HALF_PI, double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
-  map_init_pose_pitch,  \
+  t_camera_base_pitch,  \
   -TF2SIMD_HALF_PI, double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
-  map_init_pose_yaw, \
+  t_camera_base_yaw, \
   0., double) \
   /* End of list */
 
