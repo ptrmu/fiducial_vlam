@@ -20,9 +20,15 @@ namespace fiducial_vlam
   CXT_ELEM(               /* topic for publishing camera pose  */ \
   camera_pose_pub_topic,  \
   "camera_pose", std::string) \
+  CXT_ELEM(               /* topic for publishing base pose  */ \
+  base_pose_pub_topic,  \
+  "base_pose", std::string) \
   CXT_ELEM(               /* topic for publishing camera odometry  */ \
   camera_odometry_pub_topic,  \
   "camera_odom", std::string) \
+  CXT_ELEM(               /* topic for publishing base odometry  */ \
+  base_odometry_pub_topic,  \
+  "base_odom", std::string) \
   CXT_ELEM(               /* topic for republishing the image with axes added to fiducial markers  */\
   image_marked_pub_topic,  \
   "image_marked", std::string) \
@@ -43,15 +49,24 @@ namespace fiducial_vlam
   CXT_ELEM(               /* frame_id for the child in the camera tf message  */\
   camera_frame_id,  \
   "camera", std::string) \
+  CXT_ELEM(               /* frame_id for the child in the base_link tf message  */\
+  base_frame_id,  \
+  "base_link", std::string) \
   \
   CXT_ELEM(               /* non-zero => publish the pose of the camera at every frame  */ \
-  publish_pose,  \
+  publish_camera_pose,  \
+  1, int) \
+  CXT_ELEM(               /* non-zero => publish the pose of the base at every frame  */ \
+  publish_base_pose,  \
   1, int) \
   CXT_ELEM(               /* non-zero => publish the tf of the camera at every frame  */ \
   publish_tfs,  \
   1, int) \
   CXT_ELEM(               /* non-zero => publish the odometry of the camera at every frame  */ \
-  publish_odom,  \
+  publish_camera_odom,  \
+  1, int) \
+  CXT_ELEM(               /* non-zero => publish the odometry of the base at every frame  */ \
+  publish_base_odom,  \
   1, int) \
   CXT_ELEM(               /* non-zero => publish the image_marked at every frame  */ \
   publish_image_marked,  \
@@ -60,9 +75,6 @@ namespace fiducial_vlam
   stamp_msgs_with_current_time,  \
   1, int) \
   \
-  CXT_ELEM(               /* frame_id for the child in the base_link tf message  */\
-  base_frame_id,  \
-  "base_link", std::string) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
   t_camera_base_x,  \
   0., double) \
