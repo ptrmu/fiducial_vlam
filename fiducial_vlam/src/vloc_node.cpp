@@ -178,12 +178,12 @@ namespace fiducial_vlam
 
           // Publish odometry of the camera and/or the base.
           if (cxt_.publish_camera_odom_) {
-            auto odom_msg = to_odom_message(stamp, t_map_camera);
+            auto odom_msg = to_odom_message(stamp, cxt_.camera_frame_id_, t_map_camera);
             add_fixed_covariance(odom_msg.pose);
             camera_odometry_pub_->publish(odom_msg);
           }
           if (cxt_.publish_base_odom_) {
-            auto odom_msg = to_odom_message(stamp, t_map_base);
+            auto odom_msg = to_odom_message(stamp, cxt_.base_frame_id_, t_map_base);
             add_fixed_covariance(odom_msg.pose);
             base_odometry_pub_->publish(odom_msg);
           }
@@ -209,13 +209,14 @@ namespace fiducial_vlam
     }
 
     nav_msgs::msg::Odometry to_odom_message(std_msgs::msg::Header::_stamp_type stamp,
+                                            const std::string &child_frame_id,
                                             const TransformWithCovariance &t)
     {
       nav_msgs::msg::Odometry odom_message;
 
       odom_message.header.stamp = stamp;
       odom_message.header.frame_id = cxt_.map_frame_id_;
-      odom_message.child_frame_id = cxt_.camera_frame_id_;
+      odom_message.child_frame_id = child_frame_id;
       odom_message.pose = to_PoseWithCovariance_msg(t);
       return odom_message;
     }
