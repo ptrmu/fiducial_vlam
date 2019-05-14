@@ -48,7 +48,7 @@ namespace fiducial_vlam
   "fiducial_marker_locations_saved.yaml", std::string) \
   CXT_ELEM(               /* non-zero => create a new map  */\
   make_not_use_map,  \
-  1, int) \
+  0, int) \
   CXT_ELEM(               /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
   map_init_style, \
   1, int) \
