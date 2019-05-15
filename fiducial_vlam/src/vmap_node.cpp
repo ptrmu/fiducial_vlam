@@ -342,8 +342,8 @@ namespace fiducial_vlam
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr fiducial_markers_pub_{};
     rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_message_pub_{};
 
-    rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_sub_;
-    rclcpp::TimerBase::SharedPtr map_pub_timer_;
+    rclcpp::Subscription<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_sub_{};
+    rclcpp::TimerBase::SharedPtr map_pub_timer_{};
 
   public:
 
@@ -376,13 +376,16 @@ namespace fiducial_vlam
       }
 
       // ROS subscriptions
-      observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
-        cxt_.fiducial_observations_sub_topic_,
-        [this](const fiducial_vlam_msgs::msg::Observations::UniquePtr msg) -> void
-        {
-          this->observations_callback(msg);
-        },
-        16);
+      // If we are not making a map, don't bother subscribing to the observations.
+      if (!cxt_.make_not_use_map_) {
+        observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
+          cxt_.fiducial_observations_sub_topic_,
+          [this](const fiducial_vlam_msgs::msg::Observations::UniquePtr msg) -> void
+          {
+            this->observations_callback(msg);
+          },
+          16);
+      }
 
       // Timer for publishing map info
       map_pub_timer_ = create_wall_timer(
@@ -570,12 +573,16 @@ namespace fiducial_vlam
 
       // If not building a map, then load the map from a file
       if (!cxt_.make_not_use_map_) {
+        RCLCPP_INFO(get_logger(), "Loading map file '%s'", cxt_.marker_map_load_full_filename_.c_str());
+
         // load the map.
         map_unique = from_YAML_file(cxt_.marker_map_load_full_filename_);
         if (map_unique) {
           return map_unique;
         }
         // If an error, fall into initialize the map
+        RCLCPP_ERROR(get_logger(), "Could not load map file");
+        RCLCPP_ERROR(get_logger(), "Falling into initialize map. (style: %d)", cxt_.map_init_style_);
       }
 
       // Building a map. Use the different styles of map initialization.
