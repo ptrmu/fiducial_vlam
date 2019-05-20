@@ -73,7 +73,7 @@ namespace fiducial_vlam
   1, int) \
   CXT_ELEM(               /* non-zero => debug mode, helpful for dealing with rviz when playing bags.  */ \
   stamp_msgs_with_current_time,  \
-  1, int) \
+  0, int) \
   \
   CXT_ELEM(               /* camera=>baselink transform component */ \
   t_camera_base_x,  \
@@ -83,7 +83,7 @@ namespace fiducial_vlam
   0., double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
   t_camera_base_z, \
-  -0.01, double) \
+  -0.035, double) \
   CXT_ELEM(               /* camera=>baselink transform component */ \
   t_camera_base_roll, \
   TF2SIMD_HALF_PI, double) \
