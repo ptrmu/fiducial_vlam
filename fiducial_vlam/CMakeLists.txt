@@ -47,6 +47,7 @@ include_directories(
   ${tf2_msgs_INCLUDE_DIRS}
   ${visualization_msgs_INCLUDE_DIRS}
   ${yaml_cpp_vendor_INCLUDE_DIRS}
+  ${cv_bridge_INCLUDE_DIRS}
 )
 
 # Debugging: set _dump_all_variables to true
