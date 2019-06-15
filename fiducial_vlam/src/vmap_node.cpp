@@ -380,11 +380,11 @@ namespace fiducial_vlam
       if (!cxt_.make_not_use_map_) {
         observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
           cxt_.fiducial_observations_sub_topic_,
+          16,
           [this](const fiducial_vlam_msgs::msg::Observations::UniquePtr msg) -> void
           {
             this->observations_callback(msg);
-          },
-          16);
+          });
       }
 
       // Timer for publishing map info
