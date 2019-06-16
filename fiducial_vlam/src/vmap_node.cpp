@@ -377,7 +377,7 @@ namespace fiducial_vlam
 
       // ROS subscriptions
       // If we are not making a map, don't bother subscribing to the observations.
-      if (!cxt_.make_not_use_map_) {
+      if (cxt_.make_not_use_map_) {
         observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
           cxt_.fiducial_observations_sub_topic_,
           16,
