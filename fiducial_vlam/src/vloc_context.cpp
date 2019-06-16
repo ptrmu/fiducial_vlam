@@ -5,15 +5,21 @@
 
 namespace fiducial_vlam
 {
-  void VlocContext::load_parameters(rclcpp::Node &node)
+  void VlocContext::load_parameters()
   {
 #undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER(node, (*this), n, t, d)
-    CXT_MACRO_INIT_PARAMETERS(VLOC_ALL_PARAMS, validate_parameters);
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER(node_, (*this), n, t, d)
+    CXT_MACRO_INIT_PARAMETERS(VLOC_ALL_PARAMS, validate_parameters)
 
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED((*this), n, t)
-    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node, VLOC_ALL_PARAMS, validate_parameters)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node_, VLOC_ALL_PARAMS, validate_parameters)
+
+    RCLCPP_INFO(node_.get_logger(), "VlocNode Parameters");
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, node_.get_logger(), (*this), n, t, d)
+    VLOC_ALL_PARAMS
   }
 
   void VlocContext::validate_parameters()

@@ -20,7 +20,7 @@ namespace fiducial_vlam
 
   class VlocNode : public rclcpp::Node
   {
-    VlocContext cxt_{};
+    VlocContext cxt_;
     std::unique_ptr<Map> map_{};
     std::unique_ptr<CameraInfo> camera_info_{};
     std::unique_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
@@ -41,10 +41,10 @@ namespace fiducial_vlam
 
   public:
     VlocNode()
-      : Node("vloc_node")
+      : Node("vloc_node"), cxt_{*this}
     {
       // Get parameters from the command line
-      cxt_.load_parameters(*this);
+      cxt_.load_parameters();
 
       // ROS publishers. Initialize after parameters have been loaded.
       observations_pub_ = create_publisher<fiducial_vlam_msgs::msg::Observations>(

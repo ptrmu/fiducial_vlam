@@ -103,12 +103,17 @@ namespace fiducial_vlam
 
   struct VlocContext
   {
+    rclcpp::Node & node_;
+    VlocContext(rclcpp::Node &node) :
+      node_{node}
+    {}
+
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
     VLOC_ALL_PARAMS
     VLOC_ALL_OTHERS
 
-    void load_parameters(rclcpp::Node &node);
+    void load_parameters();
 
     void validate_parameters();
   };

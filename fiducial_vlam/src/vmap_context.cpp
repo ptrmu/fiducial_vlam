@@ -5,15 +5,22 @@
 
 namespace fiducial_vlam
 {
-  void VmapContext::load_parameters(rclcpp::Node &node)
+  void VmapContext::load_parameters()
   {
 #undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER(node, (*this), n, t, d)
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER(node_, (*this), n, t, d)
     CXT_MACRO_INIT_PARAMETERS(VMAP_ALL_PARAMS, validate_parameters);
+
 
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED((*this), n, t)
-    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node, VMAP_ALL_PARAMS, validate_parameters)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node_, VMAP_ALL_PARAMS, validate_parameters)
+
+    RCLCPP_INFO(node_.get_logger(), "VmapNode Parameters");
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, node_.get_logger(), (*this), n, t, d)
+    VMAP_ALL_PARAMS
   }
 
   void VmapContext::validate_parameters()

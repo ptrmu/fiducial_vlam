@@ -330,7 +330,7 @@ namespace fiducial_vlam
 
   class VmapNode : public rclcpp::Node
   {
-    VmapContext cxt_{};
+    VmapContext cxt_;
     std::unique_ptr<Map> map_{};
     Localizer localizer_{map_};
     std::unique_ptr<Mapper> mapper_{};
@@ -348,10 +348,10 @@ namespace fiducial_vlam
   public:
 
     VmapNode()
-      : Node("vmap_node")
+      : Node("vmap_node"), cxt_{*this}
     {
       // Get parameters from the command line
-      cxt_.load_parameters(*this);
+      cxt_.load_parameters();
 
       // Initialize the map. Load from file or otherwise.
       map_ = initialize_map();
