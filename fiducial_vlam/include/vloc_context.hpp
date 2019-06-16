@@ -13,103 +13,100 @@ namespace rclcpp
 
 namespace fiducial_vlam
 {
-#define CXT_MACRO_ALL_PARAMS \
-  CXT_ELEM(               /* topic for publishing fiducial observations  */ \
+#define VLOC_ALL_PARAMS \
+  CXT_MACRO_MEMBER(       /* topic for publishing fiducial observations  */ \
   fiducial_observations_pub_topic,  \
-  "/fiducial_observations", std::string) \
-  CXT_ELEM(               /* topic for publishing camera pose  */ \
+  std::string, "/fiducial_observations") \
+  CXT_MACRO_MEMBER(       /* topic for publishing camera pose  */ \
   camera_pose_pub_topic,  \
-  "camera_pose", std::string) \
-  CXT_ELEM(               /* topic for publishing base pose  */ \
+  std::string, "camera_pose") \
+  CXT_MACRO_MEMBER(       /* topic for publishing base pose  */ \
   base_pose_pub_topic,  \
-  "base_pose", std::string) \
-  CXT_ELEM(               /* topic for publishing camera odometry  */ \
+  std::string, "base_pose") \
+  CXT_MACRO_MEMBER(       /* topic for publishing camera odometry  */ \
   camera_odometry_pub_topic,  \
-  "camera_odom", std::string) \
-  CXT_ELEM(               /* topic for publishing base odometry  */ \
+  std::string, "camera_odom") \
+  CXT_MACRO_MEMBER(       /* topic for publishing base odometry  */ \
   base_odometry_pub_topic,  \
-  "base_odom", std::string) \
-  CXT_ELEM(               /* topic for republishing the image with axes added to fiducial markers  */\
+  std::string, "base_odom") \
+  CXT_MACRO_MEMBER(       /* topic for republishing the image with axes added to fiducial markers  */\
   image_marked_pub_topic,  \
-  "image_marked", std::string) \
+  std::string, "image_marked") \
   \
-  CXT_ELEM(               /* topic for subscription to fiducial_vlam_msgs::msg::Map  */\
+  CXT_MACRO_MEMBER(       /* topic for subscription to fiducial_vlam_msgs::msg::Map  */\
   fiducial_map_sub_topic,  \
-  "/fiducial_map", std::string) \
-  CXT_ELEM(               /* topic for subscription to sensor_msgs::msg::CameraInfo associated with the image  */ \
+  std::string, "/fiducial_map") \
+  CXT_MACRO_MEMBER(       /* topic for subscription to sensor_msgs::msg::CameraInfo associated with the image  */ \
   camera_info_sub_topic,  \
-  "camera_info", std::string) \
-  CXT_ELEM(               /* topic for subscription to sensor_msgs::msg::Image */ \
+  std::string, "camera_info") \
+  CXT_MACRO_MEMBER(       /* topic for subscription to sensor_msgs::msg::Image */ \
   image_raw_sub_topic,  \
-  "image_raw", std::string) \
+  std::string, "image_raw") \
   \
-  CXT_ELEM(               /* frame_id for camera pose and tf messages - normally "map"  */ \
+  CXT_MACRO_MEMBER(       /* frame_id for camera pose and tf messages - normally "map"  */ \
   map_frame_id,  \
-  "map", std::string) \
-  CXT_ELEM(               /* frame_id for the child in the camera tf message  */\
+  std::string, "map") \
+  CXT_MACRO_MEMBER(       /* frame_id for the child in the camera tf message  */\
   camera_frame_id,  \
-  "camera", std::string) \
-  CXT_ELEM(               /* frame_id for the child in the base_link tf message  */\
+  std::string, "camera") \
+  CXT_MACRO_MEMBER(       /* frame_id for the child in the base_link tf message  */\
   base_frame_id,  \
-  "base_link", std::string) \
+  std::string, "base_link") \
   \
-  CXT_ELEM(               /* non-zero => publish the pose of the camera at every frame  */ \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the pose of the camera at every frame  */ \
   publish_camera_pose,  \
-  1, int) \
-  CXT_ELEM(               /* non-zero => publish the pose of the base at every frame  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the pose of the base at every frame  */ \
   publish_base_pose,  \
-  1, int) \
-  CXT_ELEM(               /* non-zero => publish the tf of the camera at every frame  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the tf of the camera at every frame  */ \
   publish_tfs,  \
-  1, int) \
-  CXT_ELEM(               /* non-zero => publish the odometry of the camera at every frame  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the odometry of the camera at every frame  */ \
   publish_camera_odom,  \
-  1, int) \
-  CXT_ELEM(               /* non-zero => publish the odometry of the base at every frame  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the odometry of the base at every frame  */ \
   publish_base_odom,  \
-  1, int) \
-  CXT_ELEM(               /* non-zero => publish the image_marked at every frame  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the image_marked at every frame  */ \
   publish_image_marked,  \
-  1, int) \
-  CXT_ELEM(               /* non-zero => debug mode, helpful for dealing with rviz when playing bags.  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => debug mode, helpful for dealing with rviz when playing bags.  */ \
   stamp_msgs_with_current_time,  \
-  0, int) \
+  int, 0) \
   \
-  CXT_ELEM(               /* camera=>baselink transform component */ \
+  CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_x,  \
-  0., double) \
-  CXT_ELEM(               /* camera=>baselink transform component */ \
+  double, 0.) \
+  CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_y,  \
-  0., double) \
-  CXT_ELEM(               /* camera=>baselink transform component */ \
+  double, 0.) \
+  CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_z, \
-  -0.035, double) \
-  CXT_ELEM(               /* camera=>baselink transform component */ \
+  double, -0.035) \
+  CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_roll, \
-  TF2SIMD_HALF_PI, double) \
-  CXT_ELEM(               /* camera=>baselink transform component */ \
+  double, TF2SIMD_HALF_PI) \
+  CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_pitch,  \
-  -TF2SIMD_HALF_PI, double) \
-  CXT_ELEM(               /* camera=>baselink transform component */ \
+  double, -TF2SIMD_HALF_PI) \
+  CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_yaw, \
-  0., double) \
+  double, 0.) \
   /* End of list */
 
-#define CXT_MACRO_ALL_MEMBERS \
-  CXT_MEMBER(             /* transform from base frame to camera frame */ \
+#define VLOC_ALL_OTHERS \
+  CXT_MACRO_MEMBER(       /* transform from base frame to camera frame */ \
   t_camera_base,  \
-  TransformWithCovariance) \
+  TransformWithCovariance,) \
   /* End of list */
 
   struct VlocContext
   {
-#undef CXT_ELEM
-#define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-    CXT_MACRO_ALL_PARAMS
-
-#undef CXT_MEMBER
-#define CXT_MEMBER(n, a...) CXT_MEMBER_FIELD_DEF(n, a)
-    CXT_MACRO_ALL_MEMBERS
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
+    VLOC_ALL_PARAMS
+    VLOC_ALL_OTHERS
 
     void load_parameters(rclcpp::Node &node);
 
