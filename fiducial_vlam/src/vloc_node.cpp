@@ -78,7 +78,7 @@ namespace fiducial_vlam
       // ROS subscriptions
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         cxt_.camera_info_sub_topic_,
-        16,
+        rclcpp::SensorDataQoS(),
         [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
           if (!camera_info_) {
