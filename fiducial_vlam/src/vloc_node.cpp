@@ -1,4 +1,6 @@
 
+#include <iomanip>
+
 #include "rclcpp/rclcpp.hpp"
 
 #include "fiducial_math.hpp"
@@ -77,9 +79,12 @@ namespace fiducial_vlam
       }
 
       // ROS subscriptions
+      auto camera_info_qos = cxt_.sub_camera_info_best_effort_not_reliable_ ?
+                             rclcpp::QoS{rclcpp::SensorDataQoS()} :
+                             rclcpp::QoS{rclcpp::ServicesQoS()};
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         cxt_.camera_info_sub_topic_,
-        rclcpp::SensorDataQoS(),
+        camera_info_qos,
         [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
           if (!camera_info_) {
@@ -91,7 +96,7 @@ namespace fiducial_vlam
 
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
-        16,
+        rclcpp::ServicesQoS(),
         [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // the stamp to use for all published messages derived from this image message.
@@ -211,6 +216,15 @@ namespace fiducial_vlam
               tf_message_pub_->publish(tf_message);
             }
 
+            // if requested, publish the camera tf as determined from each marker.
+            if (cxt_.publish_marker_tfs_) {
+              auto t_map_cameras = localizer_.markers_t_map_cameras(observations, t_map_markers, fm);
+              auto tf_message = to_markers_tf_message(stamp, observations, t_map_cameras);
+              if (tf_message.transforms.size() > 0) {
+                tf_message_pub_->publish(tf_message);
+              }
+            }
+
             // Publish the observations
             auto observations_msg = observations.to_msg(stamp, image_msg.header.frame_id, *camera_info_msg_);
             observations_pub_->publish(observations_msg);
@@ -260,6 +274,37 @@ namespace fiducial_vlam
         msg.child_frame_id = cxt_.base_frame_id_;
         msg.transform = tf2::toMsg(t_map_base.transform());
         tf_message.transforms.emplace_back(msg);
+      }
+
+      return tf_message;
+    }
+
+    tf2_msgs::msg::TFMessage to_markers_tf_message(
+      std_msgs::msg::Header::_stamp_type stamp,
+      const Observations &observations,
+      const std::vector<TransformWithCovariance> &t_map_cameras)
+    {
+      tf2_msgs::msg::TFMessage tf_message;
+
+      geometry_msgs::msg::TransformStamped msg;
+      msg.header.stamp = stamp;
+      msg.header.frame_id = cxt_.map_frame_id_;
+
+      for (int i = 0; i < observations.size(); i += 1) {
+        auto &observation = observations.observations()[i];
+        auto &t_map_camera = t_map_cameras[i];
+
+        if (t_map_camera.is_valid()) {
+
+          if (cxt_.camera_frame_id_.size()) {
+            std::ostringstream oss_child_frame_id;
+            oss_child_frame_id << cxt_.camera_frame_id_ << "_m" << std::setfill('0') << std::setw(3)
+                               << observation.id();
+            msg.child_frame_id = oss_child_frame_id.str();
+            msg.transform = tf2::toMsg(t_map_camera.transform());
+            tf_message.transforms.emplace_back(msg);
+          }
+        }
       }
 
       return tf_message;

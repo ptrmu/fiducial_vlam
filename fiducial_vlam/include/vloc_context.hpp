@@ -62,6 +62,9 @@ namespace fiducial_vlam
   CXT_MACRO_MEMBER(       /* non-zero => publish the tf of the camera at every frame  */ \
   publish_tfs,  \
   int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the camera tf as determined by each visible marker  */ \
+  publish_marker_tfs,  \
+  int, 1) \
   CXT_MACRO_MEMBER(       /* non-zero => publish the odometry of the camera at every frame  */ \
   publish_camera_odom,  \
   int, 1) \
@@ -93,6 +96,10 @@ namespace fiducial_vlam
   CXT_MACRO_MEMBER(       /* camera=>baselink transform component */ \
   t_camera_base_yaw, \
   double, 0.) \
+  \
+  CXT_MACRO_MEMBER(       /* subscribe to camera_info with best_effort (gazebo camera) not reliable (tello_ros) */ \
+  sub_camera_info_best_effort_not_reliable, \
+  int, 0) \
   /* End of list */
 
 #define VLOC_ALL_OTHERS \
