@@ -97,7 +97,7 @@ namespace fiducial_vlam
 
     void add(const Observation observation)
     {
-      observations_.emplace_back(std::move(observation));
+      observations_.emplace_back(observation);
     }
 
     fiducial_vlam_msgs::msg::Observations to_msg(std_msgs::msg::Header::_stamp_type stamp,

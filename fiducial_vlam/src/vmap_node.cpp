@@ -41,10 +41,11 @@ namespace fiducial_vlam
       emitter_ << YAML::Key << "f" << YAML::Value << (marker.is_fixed() ? 1 : 0);
       auto &c = marker.t_map_marker().transform().getOrigin();
       emitter_ << YAML::Key << "xyz" << YAML::Value << YAML::Flow << YAML::BeginSeq << c.x() << c.y() << c.z()
-           << YAML::EndSeq;
+               << YAML::EndSeq;
       double roll, pitch, yaw;
       marker.t_map_marker().transform().getBasis().getRPY(roll, pitch, yaw);
-      emitter_ << YAML::Key << "rpy" << YAML::Value << YAML::Flow << YAML::BeginSeq << roll << pitch << yaw << YAML::EndSeq;
+      emitter_ << YAML::Key << "rpy" << YAML::Value << YAML::Flow << YAML::BeginSeq << roll << pitch << yaw
+               << YAML::EndSeq;
       emitter_ << YAML::EndMap;
     }
 
@@ -67,7 +68,7 @@ namespace fiducial_vlam
     }
 
   public:
-    ToYAML(const Map &map)
+    explicit ToYAML(const Map &map)
       : map_(map)
     {}
 
@@ -118,7 +119,7 @@ namespace fiducial_vlam
         return yaml_error("marker.rpy incorrect size");
       }
 
-      std::array<double, 3> xyz_data;
+      std::array<double, 3> xyz_data{};
       for (int i = 0; i < xyz_data.size(); i += 1) {
         auto i_node = xyz_node[i];
         if (!i_node.IsScalar()) {
@@ -126,7 +127,7 @@ namespace fiducial_vlam
         }
         xyz_data[i] = i_node.as<double>();
       }
-      std::array<double, 3> rpy_data;
+      std::array<double, 3> rpy_data{};
       for (int i = 0; i < rpy_data.size(); i += 1) {
         auto i_node = rpy_node[i];
         if (!i_node.IsScalar()) {
@@ -184,7 +185,7 @@ namespace fiducial_vlam
       return yaml_error("root failed IsMap()");
     }
 
-    bool yaml_error(const std::string s)
+    bool yaml_error(const std::string &s)
     {
       return false;
     }
@@ -399,6 +400,8 @@ namespace fiducial_vlam
           }
         });
 
+      (void) observations_sub_;
+      (void) map_pub_timer_;
       RCLCPP_INFO(get_logger(), "vmap_node ready");
     }
 
@@ -507,7 +510,7 @@ namespace fiducial_vlam
       }
 
       // Save the map
-      if (cxt_.make_not_use_map_ && cxt_.marker_map_save_full_filename_.size()) {
+      if (cxt_.make_not_use_map_ && !cxt_.marker_map_save_full_filename_.empty()) {
         to_YAML_file(*map_, cxt_.marker_map_save_full_filename_);
       }
     }
@@ -541,7 +544,7 @@ namespace fiducial_vlam
       auto map_unique = from_YAML.from_YAML(in);
       if (!map_unique) {
         // Only display an error if a filename is provided.
-        if (filename.size()) {
+        if (!filename.empty()) {
           RCLCPP_INFO(get_logger(), "Config error: error parsing config file: '%s'", filename.c_str());
           RCLCPP_INFO(get_logger(), "Config error: '%s'", from_YAML.error_msg().c_str());
         }
@@ -632,7 +635,7 @@ int main(int argc, char **argv)
 
   // Create node
   auto node = std::make_shared<fiducial_vlam::VmapNode>();
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin until rclcpp::ok() returns false
   rclcpp::spin(node);

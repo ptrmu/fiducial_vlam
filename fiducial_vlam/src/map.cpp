@@ -217,8 +217,6 @@ namespace fiducial_vlam
       t_map_cameras.emplace_back(t_map_camera);
     }
 
-    auto t_map_camera = fm.solve_t_map_camera(observations, t_map_markers, map_->marker_length());
-
     return t_map_cameras;
   }
 

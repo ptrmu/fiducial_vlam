@@ -127,6 +127,9 @@ namespace fiducial_vlam
           map_ = std::make_unique<Map>(*msg);
         });
 
+      (void) camera_info_sub_;
+      (void) image_raw_sub_;
+      (void) map_sub_;
       RCLCPP_INFO(get_logger(), "vloc_node ready");
     }
 
@@ -220,7 +223,7 @@ namespace fiducial_vlam
             if (cxt_.publish_marker_tfs_) {
               auto t_map_cameras = localizer_.markers_t_map_cameras(observations, t_map_markers, fm);
               auto tf_message = to_markers_tf_message(stamp, observations, t_map_cameras);
-              if (tf_message.transforms.size() > 0) {
+              if (!tf_message.transforms.empty()) {
                 tf_message_pub_->publish(tf_message);
               }
             }
@@ -265,12 +268,12 @@ namespace fiducial_vlam
 
       // The camera_frame_id parameter is non-empty to publish the camera tf.
       // The base_frame_id parameter is non-empty to publish the base tf.
-      if (cxt_.camera_frame_id_.size()) {
+      if (!cxt_.camera_frame_id_.empty()) {
         msg.child_frame_id = cxt_.camera_frame_id_;
         msg.transform = tf2::toMsg(t_map_camera.transform());
         tf_message.transforms.emplace_back(msg);
       }
-      if (cxt_.base_frame_id_.size()) {
+      if (!cxt_.base_frame_id_.empty()) {
         msg.child_frame_id = cxt_.base_frame_id_;
         msg.transform = tf2::toMsg(t_map_base.transform());
         tf_message.transforms.emplace_back(msg);
@@ -296,7 +299,7 @@ namespace fiducial_vlam
 
         if (t_map_camera.is_valid()) {
 
-          if (cxt_.camera_frame_id_.size()) {
+          if (!cxt_.camera_frame_id_.empty()) {
             std::ostringstream oss_child_frame_id;
             oss_child_frame_id << cxt_.camera_frame_id_ << "_m" << std::setfill('0') << std::setw(3)
                                << observation.id();
@@ -337,7 +340,7 @@ int main(int argc, char **argv)
 
   // Create node
   auto node = std::make_shared<fiducial_vlam::VlocNode>();
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
 
   // Spin until rclcpp::ok() returns false
   rclcpp::spin(node);

@@ -110,8 +110,9 @@ namespace fiducial_vlam
 
   struct VlocContext
   {
-    rclcpp::Node & node_;
-    VlocContext(rclcpp::Node &node) :
+    rclcpp::Node &node_;
+
+    explicit VlocContext(rclcpp::Node &node) :
       node_{node}
     {}
 

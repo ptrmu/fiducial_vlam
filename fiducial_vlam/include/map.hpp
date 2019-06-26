@@ -30,7 +30,7 @@ namespace fiducial_vlam
   class Marker
   {
     // The id of the marker
-    int id_;
+    int id_{};
 
     // The pose of the marker in the map frame
     TransformWithCovariance t_map_marker_;
@@ -39,7 +39,7 @@ namespace fiducial_vlam
     bool is_fixed_{false};
 
     // Count of updates
-    int update_count_;
+    int update_count_{};
 
   public:
     Marker() = default;
