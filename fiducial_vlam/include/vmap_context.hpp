@@ -1,7 +1,7 @@
 #ifndef FIDUCIAL_VLAM_VMAP_CONTEXT_HPP
 #define FIDUCIAL_VLAM_VMAP_CONTEXT_HPP
 
-#include "context_macros.hpp"
+#include "ros2_shared/context_macros.hpp"
 #include "transform_with_covariance.hpp"
 
 namespace rclcpp

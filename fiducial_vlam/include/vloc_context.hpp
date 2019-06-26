@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "context_macros.hpp"
+#include "ros2_shared/context_macros.hpp"
 #include "transform_with_covariance.hpp"
 
 namespace rclcpp
