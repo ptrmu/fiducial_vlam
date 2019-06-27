@@ -635,7 +635,8 @@ int main(int argc, char **argv)
 
   // Create node
   auto node = std::make_shared<fiducial_vlam::VmapNode>();
-  (void) rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) result;
 
   // Spin until rclcpp::ok() returns false
   rclcpp::spin(node);
