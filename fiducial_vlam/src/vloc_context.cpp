@@ -5,15 +5,21 @@
 
 namespace fiducial_vlam
 {
-  void VlocContext::load_parameters(rclcpp::Node &node)
+  void VlocContext::load_parameters()
   {
-    // Read parameters from the command line. NOTE: the get_parameter() method will
-    // not modify the member element if the parameter does not exist on the command line.
-#undef CXT_ELEM
-#define CXT_ELEM(n, a...) CXT_PARAM_LOAD_PARAM(n, a)
-    CXT_MACRO_ALL_PARAMS
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOAD_PARAMETER(node_, (*this), n, t, d)
+    CXT_MACRO_INIT_PARAMETERS(VLOC_ALL_PARAMS, validate_parameters)
 
-    validate_parameters();
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED((*this), n, t)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node_, VLOC_ALL_PARAMS, validate_parameters)
+
+    RCLCPP_INFO(node_.get_logger(), "VlocNode Parameters");
+
+#undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_LOG_PARAMETER(RCLCPP_INFO, node_.get_logger(), (*this), n, t, d)
+    VLOC_ALL_PARAMS
   }
 
   void VlocContext::validate_parameters()

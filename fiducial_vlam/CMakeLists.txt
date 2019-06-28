@@ -19,6 +19,7 @@ endif()
 if($ENV{CLION_IDE})
   message("Running inside CLion")
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
+  set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
 endif()
 
@@ -30,6 +31,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(ros2_shared REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
@@ -42,6 +44,7 @@ include_directories(
   ${fiducial_vlam_msgs_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${nav_msgs_INCLUDE_DIRS}
+  ${ros2_shared_INCLUDE_DIRS}
   ${sensor_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
   ${tf2_msgs_INCLUDE_DIRS}
@@ -78,6 +81,7 @@ ament_target_dependencies(vloc_node
   OpenCV
   rclcpp
   nav_msgs
+  ros2_shared
   sensor_msgs
   std_msgs
   tf2_msgs
@@ -101,6 +105,7 @@ ament_target_dependencies(vmap_node
   geometry_msgs
   OpenCV
   rclcpp
+  ros2_shared
   std_msgs
   tf2_msgs
   visualization_msgs

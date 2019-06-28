@@ -330,7 +330,7 @@ namespace fiducial_vlam
 
   class VmapNode : public rclcpp::Node
   {
-    VmapContext cxt_{};
+    VmapContext cxt_;
     std::unique_ptr<Map> map_{};
     Localizer localizer_{map_};
     std::unique_ptr<Mapper> mapper_{};
@@ -348,10 +348,10 @@ namespace fiducial_vlam
   public:
 
     VmapNode()
-      : Node("vmap_node")
+      : Node("vmap_node"), cxt_{*this}
     {
       // Get parameters from the command line
-      cxt_.load_parameters(*this);
+      cxt_.load_parameters();
 
       // Initialize the map. Load from file or otherwise.
       map_ = initialize_map();
@@ -377,14 +377,14 @@ namespace fiducial_vlam
 
       // ROS subscriptions
       // If we are not making a map, don't bother subscribing to the observations.
-      if (!cxt_.make_not_use_map_) {
+      if (cxt_.make_not_use_map_) {
         observations_sub_ = create_subscription<fiducial_vlam_msgs::msg::Observations>(
           cxt_.fiducial_observations_sub_topic_,
+          16,
           [this](const fiducial_vlam_msgs::msg::Observations::UniquePtr msg) -> void
           {
             this->observations_callback(msg);
-          },
-          16);
+          });
       }
 
       // Timer for publishing map info

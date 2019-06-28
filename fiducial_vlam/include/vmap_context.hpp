@@ -1,7 +1,7 @@
 #ifndef FIDUCIAL_VLAM_VMAP_CONTEXT_HPP
 #define FIDUCIAL_VLAM_VMAP_CONTEXT_HPP
 
-#include "context_macros.hpp"
+#include "ros2_shared/context_macros.hpp"
 #include "transform_with_covariance.hpp"
 
 namespace rclcpp
@@ -11,90 +11,92 @@ namespace rclcpp
 
 namespace fiducial_vlam
 {
-#define CXT_MACRO_ALL_PARAMS \
-  CXT_ELEM(               /* topic for publishing map of markers  */ \
+#define VMAP_ALL_PARAMS \
+  CXT_MACRO_MEMBER(       /* topic for publishing map of markers  */ \
   fiducial_map_pub_topic,  \
-  "/fiducial_map", std::string) \
-  CXT_ELEM(               /* topic for publishing rviz visualizations of the fiducial markers  */ \
+  std::string, "/fiducial_map") \
+  CXT_MACRO_MEMBER(       /* topic for publishing rviz visualizations of the fiducial markers  */ \
   fiducial_markers_pub_topic,  \
-  "fiducial_markers", std::string) \
+  std::string, "fiducial_markers") \
   \
-  CXT_ELEM(               /* topic for subscription to fiducial_vlam_msgs::msg::Observations  */ \
+  CXT_MACRO_MEMBER(       /* topic for subscription to fiducial_vlam_msgs::msg::Observations  */ \
   fiducial_observations_sub_topic,  \
-  "/fiducial_observations", std::string) \
+  std::string, "/fiducial_observations") \
   \
-  CXT_ELEM(               /* frame_id for marker and tf messages - normally "map"  */ \
+  CXT_MACRO_MEMBER(       /* frame_id for marker and tf messages - normally "map"  */ \
   map_frame_id,  \
-  "map", std::string) \
-  CXT_ELEM(               /* frame_id for the child in the marker tf message  */\
+  std::string, "map") \
+  CXT_MACRO_MEMBER(       /* frame_id for the child in the marker tf message  */\
   marker_prefix_frame_id,  \
-  "marker_", std::string) \
+  std::string, "marker_") \
   \
-  CXT_ELEM(               /* non-zero => publish the tf of all the known markers  */ \
+  CXT_MACRO_MEMBER(       /* non-zero => publish the tf of all the known markers  */ \
   publish_tfs, \
-  1, int) \
-  CXT_ELEM(               /* non-zero => publish a shape that represents a marker  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* non-zero => publish a shape that represents a marker  */ \
   publish_marker_visualizations, \
-  1, int) \
-  CXT_ELEM(               /* Hz => rate at which the marker map is published */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* Hz => rate at which the marker map is published */ \
   marker_map_publish_frequency_hz, \
-  0., double) \
+  double, 0.) \
   \
-  CXT_ELEM(               /* name of the file to store the marker map in  */  \
+  CXT_MACRO_MEMBER(       /* name of the file to store the marker map in  */  \
   marker_map_save_full_filename, \
-  "fiducial_marker_locations.yaml", std::string) \
-  CXT_ELEM(               /* name of the file to load the marker map from  */  \
+  std::string, "fiducial_marker_locations.yaml") \
+  CXT_MACRO_MEMBER(       /* name of the file to load the marker map from  */  \
   marker_map_load_full_filename, \
-  "fiducial_marker_locations_saved.yaml", std::string) \
-  CXT_ELEM(               /* non-zero => create a new map  */\
+  std::string, "fiducial_marker_locations_saved.yaml") \
+  CXT_MACRO_MEMBER(       /* non-zero => create a new map  */\
   make_not_use_map,  \
-  0, int) \
-  CXT_ELEM(               /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* 0->marker id, pose from file, 1->marker id, pose as parameter, 2->camera pose as parameter  */ \
   map_init_style, \
-  1, int) \
-  CXT_ELEM(               /* marker id for map initialization */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* marker id for map initialization */ \
   map_init_id,  \
-  1, int) \
-  CXT_ELEM(               /* pose component for map initialization */ \
+  int, 1) \
+  CXT_MACRO_MEMBER(       /* pose component for map initialization */ \
   map_init_pose_x,  \
-  0., double) \
-  CXT_ELEM(               /* pose component for map initialization */ \
+  double, 0.) \
+  CXT_MACRO_MEMBER(       /* pose component for map initialization */ \
   map_init_pose_y,  \
-  0., double) \
-  CXT_ELEM(               /* pose component for map initialization */ \
+  double, 0.) \
+  CXT_MACRO_MEMBER(       /* pose component for map initialization */ \
   map_init_pose_z, \
-  1., double) \
-  CXT_ELEM(               /* pose component for map initialization */ \
+  double, 1.) \
+  CXT_MACRO_MEMBER(       /* pose component for map initialization */ \
   map_init_pose_roll, \
-  TF2SIMD_HALF_PI, double) \
-  CXT_ELEM(               /* pose component for map initialization */ \
+  double, TF2SIMD_HALF_PI) \
+  CXT_MACRO_MEMBER(       /* pose component for map initialization */ \
   map_init_pose_pitch,  \
-  0., double) \
-  CXT_ELEM(               /* pose component for map initialization */ \
+  double, 0.) \
+  CXT_MACRO_MEMBER(       /* pose component for map initialization */ \
   map_init_pose_yaw, \
-  -TF2SIMD_HALF_PI, double) \
-  CXT_ELEM(               /* length of a side of a marker in meters */ \
+  double, -TF2SIMD_HALF_PI) \
+  CXT_MACRO_MEMBER(       /* length of a side of a marker in meters */ \
   marker_length,  \
-  0.1627, double) \
+  double, 0.1627) \
   /* End of list */
 
-#define CXT_MACRO_ALL_MEMBERS \
-  CXT_MEMBER(             /* A transform derived from individual parameters */ \
+#define VMAP_ALL_OTHERS \
+  CXT_MACRO_MEMBER(       /* A transform derived from individual parameters */ \
   map_init_transform,  \
-  TransformWithCovariance) \
+  TransformWithCovariance,) \
   /* End of list */
 
   struct VmapContext
   {
-#undef CXT_ELEM
-#define CXT_ELEM(n, a...) CXT_PARAM_FIELD_DEF(n, a)
-    CXT_MACRO_ALL_PARAMS
+    rclcpp::Node & node_;
+    VmapContext(rclcpp::Node &node) :
+    node_{node}
+    {}
 
-#undef CXT_MEMBER
-#define CXT_MEMBER(n, a...) CXT_MEMBER_FIELD_DEF(n, a)
-    CXT_MACRO_ALL_MEMBERS
+    #undef CXT_MACRO_MEMBER
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
+    VMAP_ALL_PARAMS
+    VMAP_ALL_OTHERS
 
-    void load_parameters(rclcpp::Node &node);
+    void load_parameters();
 
     void validate_parameters();
   };

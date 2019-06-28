@@ -20,7 +20,7 @@ namespace fiducial_vlam
 
   class VlocNode : public rclcpp::Node
   {
-    VlocContext cxt_{};
+    VlocContext cxt_;
     std::unique_ptr<Map> map_{};
     std::unique_ptr<CameraInfo> camera_info_{};
     std::unique_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
@@ -41,10 +41,10 @@ namespace fiducial_vlam
 
   public:
     VlocNode()
-      : Node("vloc_node")
+      : Node("vloc_node"), cxt_{*this}
     {
       // Get parameters from the command line
-      cxt_.load_parameters(*this);
+      cxt_.load_parameters();
 
       // ROS publishers. Initialize after parameters have been loaded.
       observations_pub_ = create_publisher<fiducial_vlam_msgs::msg::Observations>(
@@ -78,6 +78,7 @@ namespace fiducial_vlam
       // ROS subscriptions
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         cxt_.camera_info_sub_topic_,
+        rclcpp::SensorDataQoS(),
         [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
           if (!camera_info_) {
@@ -85,27 +86,26 @@ namespace fiducial_vlam
             // Save the info message because we pass it along with the observations.
             camera_info_msg_ = std::make_unique<sensor_msgs::msg::CameraInfo>(*msg);
           }
-        },
-        16);
+        });
 
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
+        16,
         [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // A cameraInfo must be received before processing can start.
           if (camera_info_) {
             process_image(*msg);
           }
-        },
-        16);
+        });
 
       map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
         cxt_.fiducial_map_sub_topic_,
+        16,
         [this](const fiducial_vlam_msgs::msg::Map::UniquePtr msg) -> void
         {
           map_ = std::make_unique<Map>(*msg);
-        },
-        16);
+        });
 
       RCLCPP_INFO(get_logger(), "vloc_node ready");
     }
@@ -212,7 +212,7 @@ namespace fiducial_vlam
       if (color_marked) {
         auto marked_image_msg{color->toImageMsg()};
         marked_image_msg->header = image_msg.header;
-        image_marked_pub_->publish(marked_image_msg);
+        image_marked_pub_->publish(*marked_image_msg);
       }
     }
 
