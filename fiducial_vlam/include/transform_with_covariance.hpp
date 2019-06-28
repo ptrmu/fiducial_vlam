@@ -17,7 +17,7 @@ namespace fiducial_vlam
   private:
     bool is_valid_{false};
     tf2::Transform transform_;
-    cov_type cov_;
+    cov_type cov_{};
 
     static tf2::Transform to_transform(const mu_type &mu)
     {

@@ -195,6 +195,31 @@ namespace fiducial_vlam
     return t_map_camera;
   }
 
+  std::vector<TransformWithCovariance> Localizer::markers_t_map_cameras(
+    const Observations &observations,
+    const std::vector<TransformWithCovariance> &t_map_markers,
+    FiducialMath &fm)
+  {
+    std::vector<TransformWithCovariance> t_map_cameras;
+
+    for (int i = 0; i < observations.size(); i += 1) {
+      TransformWithCovariance t_map_camera{};
+      auto &t_map_marker = t_map_markers[i];
+
+      if (t_map_marker.is_valid()) {
+        Observations single_observation{};
+        single_observation.add(observations.observations()[i]);
+        std::vector<TransformWithCovariance> single_t_map_markers{};
+        single_t_map_markers.emplace_back(t_map_marker);
+        t_map_camera = fm.solve_t_map_camera(single_observation, single_t_map_markers, map_->marker_length());
+      }
+
+      t_map_cameras.emplace_back(t_map_camera);
+    }
+
+    return t_map_cameras;
+  }
+
 // ==============================================================================
 // Utility
 // ==============================================================================

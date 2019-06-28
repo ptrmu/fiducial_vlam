@@ -50,8 +50,7 @@ namespace fiducial_vlam
 // CameraInfo class
 // ==============================================================================
 
-  CameraInfo::CameraInfo()
-  {}
+  CameraInfo::CameraInfo() = default;
 
   CameraInfo::CameraInfo(const sensor_msgs::msg::CameraInfo &camera_info_msg)
     : cv_(std::make_shared<CameraInfo::CvCameraInfo>(camera_info_msg))
@@ -77,7 +76,7 @@ namespace fiducial_vlam
     for (int i = 0; i < nMarkers; i++) {
 
       cv::Mat currentMarker = corners.getMat(i);
-      CV_Assert(currentMarker.total() == 4 && currentMarker.type() == CV_32FC2);
+      CV_Assert((currentMarker.total() == 4) && (currentMarker.type() == CV_32FC2));
 
       // draw marker sides
       for (int j = 0; j < 4; j++) {
@@ -116,11 +115,11 @@ namespace fiducial_vlam
     const CameraInfo ci_;
 
   public:
-    CvFiducialMath(const CameraInfo &camera_info)
+    explicit CvFiducialMath(const CameraInfo &camera_info)
       : ci_(camera_info)
     {}
 
-    CvFiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg)
+    explicit CvFiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg)
       : ci_(camera_info_msg)
     {}
 
@@ -166,7 +165,7 @@ namespace fiducial_vlam
 
       // If there are no known markers in the observation set, then don't
       // try to find the camera position
-      if (all_corners_f_map.size() < 1) {
+      if (all_corners_f_map.empty()) {
         return TransformWithCovariance{};
       }
 
@@ -257,7 +256,7 @@ namespace fiducial_vlam
       tf2::Vector3 corner2_f_marker(marker_length / 2.f, -marker_length / 2.f, 0.f);
       tf2::Vector3 corner3_f_marker(-marker_length / 2.f, -marker_length / 2.f, 0.f);
 
-      auto t_map_marker_tf = t_map_marker.transform();
+      const auto &t_map_marker_tf = t_map_marker.transform();
       auto corner0_f_map = t_map_marker_tf * corner0_f_marker;
       auto corner1_f_map = t_map_marker_tf * corner1_f_marker;
       auto corner2_f_map = t_map_marker_tf * corner2_f_marker;

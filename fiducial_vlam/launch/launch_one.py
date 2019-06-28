@@ -12,6 +12,12 @@ def generate_launch_description():
     # 1 or more drones:
     drones = ['drone1']
 
+    tello_ros_args = [
+        [{
+            'drone_ip': '192.168.0.21',
+        }],
+    ]
+
     # Starting locations:
     starting_locations = [
         # Face the wall of markers in fiducial.world
@@ -110,6 +116,8 @@ def generate_launch_description():
                     'map_init_pose_z': -0.035,
                     'camera_frame_id': 'camera_link' + suffix,
                     'base_odometry_pub_topic': 'filtered_odom',
+                    'sub_camera_info_best_effort_not_reliable': 1,
+                    'publish_image_marked': 1,
                 }]),
 
             # Odometry filter takes camera pose, generates base_link odom, and publishes map to base_link tf
@@ -122,7 +130,8 @@ def generate_launch_description():
 
             # Driver
             Node(package='tello_driver', node_executable='tello_driver', output='screen',
-                 node_name='tello_driver', node_namespace=namespace),
+                 node_name='tello_driver', node_namespace=namespace,
+                 parameters=tello_ros_args[idx]),
 
             # Drone controller
             Node(package='flock2', node_executable='drone_base', output='screen',

@@ -86,12 +86,13 @@ namespace fiducial_vlam
 
   struct VmapContext
   {
-    rclcpp::Node & node_;
-    VmapContext(rclcpp::Node &node) :
-    node_{node}
+    rclcpp::Node &node_;
+
+    explicit VmapContext(rclcpp::Node &node) :
+      node_{node}
     {}
 
-    #undef CXT_MACRO_MEMBER
+#undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
     VMAP_ALL_PARAMS
     VMAP_ALL_OTHERS

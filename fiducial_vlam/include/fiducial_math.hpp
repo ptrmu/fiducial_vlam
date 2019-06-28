@@ -52,9 +52,9 @@ namespace fiducial_vlam
     std::shared_ptr<CvFiducialMath> cv_;
 
   public:
-    FiducialMath(const CameraInfo &camera_info);
+    explicit FiducialMath(const CameraInfo &camera_info);
 
-    FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg);
+    explicit FiducialMath(const sensor_msgs::msg::CameraInfo &camera_info_msg);
 
     TransformWithCovariance solve_t_camera_marker(const Observation &observation, double marker_length);
 

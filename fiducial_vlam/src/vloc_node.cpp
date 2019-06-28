@@ -1,4 +1,6 @@
 
+#include <iomanip>
+
 #include "rclcpp/rclcpp.hpp"
 
 #include "fiducial_math.hpp"
@@ -25,6 +27,7 @@ namespace fiducial_vlam
     std::unique_ptr<CameraInfo> camera_info_{};
     std::unique_ptr<sensor_msgs::msg::CameraInfo> camera_info_msg_{};
     Localizer localizer_{map_};
+    std_msgs::msg::Header::_stamp_type last_image_stamp_{};
 
     rclcpp::Publisher<fiducial_vlam_msgs::msg::Observations>::SharedPtr observations_pub_{};
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr camera_pose_pub_{};
@@ -76,9 +79,12 @@ namespace fiducial_vlam
       }
 
       // ROS subscriptions
+      auto camera_info_qos = cxt_.sub_camera_info_best_effort_not_reliable_ ?
+                             rclcpp::QoS{rclcpp::SensorDataQoS()} :
+                             rclcpp::QoS{rclcpp::ServicesQoS()};
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         cxt_.camera_info_sub_topic_,
-        rclcpp::SensorDataQoS(),
+        camera_info_qos,
         [this](const sensor_msgs::msg::CameraInfo::UniquePtr msg) -> void
         {
           if (!camera_info_) {
@@ -90,13 +96,27 @@ namespace fiducial_vlam
 
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
-        16,
+        rclcpp::ServicesQoS(),
         [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
-          // A cameraInfo must be received before processing can start.
-          if (camera_info_) {
-            process_image(*msg);
+          // the stamp to use for all published messages derived from this image message.
+          auto stamp{msg->header.stamp};
+
+          if (!camera_info_) {
+            RCLCPP_DEBUG(get_logger(), "Ignore image message because no camera_info has been received yet.");
+
+          } else if ((stamp.nanosec == 0l && stamp.sec == 0l) || stamp == last_image_stamp_) {
+            RCLCPP_DEBUG(get_logger(), "Ignore image message because stamp is zero or the same as the previous.");
+
+          } else {
+            // rviz doesn't like it when time goes backward when a bag is played again.
+            // The stamp_msgs_with_current_time_ parameter can help this by replacing the
+            // image message time with the current time.
+            stamp = cxt_.stamp_msgs_with_current_time_ ? builtin_interfaces::msg::Time(now()) : stamp;
+            process_image(*msg, stamp);
           }
+
+          last_image_stamp_ = stamp;
         });
 
       map_sub_ = create_subscription<fiducial_vlam_msgs::msg::Map>(
@@ -107,26 +127,25 @@ namespace fiducial_vlam
           map_ = std::make_unique<Map>(*msg);
         });
 
+      (void) camera_info_sub_;
+      (void) image_raw_sub_;
+      (void) map_sub_;
       RCLCPP_INFO(get_logger(), "vloc_node ready");
     }
 
   private:
-    void process_image(const sensor_msgs::msg::Image &image_msg)
+    void process_image(const sensor_msgs::msg::Image &image_msg, std_msgs::msg::Header::_stamp_type stamp)
     {
       // Convert ROS to OpenCV
       cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(image_msg);
-
-      // the stamp to use for all published messages from this image.
-      auto stamp = cxt_.stamp_msgs_with_current_time_
-                   ? static_cast<std_msgs::msg::Header::_stamp_type>(now())
-                   : image_msg.header.stamp;
 
       // If we are going to publish an annotated image, make a copy of
       // the pointer to color. If no annotated image is to be published,
       // then just make an empty image pointer. The routines need to check
       // that the pointer is valid before drawing into it.
       cv_bridge::CvImagePtr color_marked;
-      if (cxt_.publish_image_marked_) {
+      if (cxt_.publish_image_marked_ &&
+          count_subscribers(cxt_.image_marked_pub_topic_) > 0) {
         color_marked = color;
       }
 
@@ -201,6 +220,15 @@ namespace fiducial_vlam
               tf_message_pub_->publish(tf_message);
             }
 
+            // if requested, publish the camera tf as determined from each marker.
+            if (cxt_.publish_tfs_per_marker_) {
+              auto t_map_cameras = localizer_.markers_t_map_cameras(observations, t_map_markers, fm);
+              auto tf_message = to_markers_tf_message(stamp, observations, t_map_cameras);
+              if (!tf_message.transforms.empty()) {
+                tf_message_pub_->publish(tf_message);
+              }
+            }
+
             // Publish the observations
             auto observations_msg = observations.to_msg(stamp, image_msg.header.frame_id, *camera_info_msg_);
             observations_pub_->publish(observations_msg);
@@ -241,15 +269,46 @@ namespace fiducial_vlam
 
       // The camera_frame_id parameter is non-empty to publish the camera tf.
       // The base_frame_id parameter is non-empty to publish the base tf.
-      if (cxt_.camera_frame_id_.size()) {
+      if (!cxt_.camera_frame_id_.empty()) {
         msg.child_frame_id = cxt_.camera_frame_id_;
         msg.transform = tf2::toMsg(t_map_camera.transform());
         tf_message.transforms.emplace_back(msg);
       }
-      if (cxt_.base_frame_id_.size()) {
+      if (!cxt_.base_frame_id_.empty()) {
         msg.child_frame_id = cxt_.base_frame_id_;
         msg.transform = tf2::toMsg(t_map_base.transform());
         tf_message.transforms.emplace_back(msg);
+      }
+
+      return tf_message;
+    }
+
+    tf2_msgs::msg::TFMessage to_markers_tf_message(
+      std_msgs::msg::Header::_stamp_type stamp,
+      const Observations &observations,
+      const std::vector<TransformWithCovariance> &t_map_cameras)
+    {
+      tf2_msgs::msg::TFMessage tf_message;
+
+      geometry_msgs::msg::TransformStamped msg;
+      msg.header.stamp = stamp;
+      msg.header.frame_id = cxt_.map_frame_id_;
+
+      for (int i = 0; i < observations.size(); i += 1) {
+        auto &observation = observations.observations()[i];
+        auto &t_map_camera = t_map_cameras[i];
+
+        if (t_map_camera.is_valid()) {
+
+          if (!cxt_.camera_frame_id_.empty()) {
+            std::ostringstream oss_child_frame_id;
+            oss_child_frame_id << cxt_.camera_frame_id_ << "_m" << std::setfill('0') << std::setw(3)
+                               << observation.id();
+            msg.child_frame_id = oss_child_frame_id.str();
+            msg.transform = tf2::toMsg(t_map_camera.transform());
+            tf_message.transforms.emplace_back(msg);
+          }
+        }
       }
 
       return tf_message;
@@ -283,6 +342,7 @@ int main(int argc, char **argv)
   // Create node
   auto node = std::make_shared<fiducial_vlam::VlocNode>();
   auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
+  (void) result;
 
   // Spin until rclcpp::ok() returns false
   rclcpp::spin(node);
