@@ -144,7 +144,8 @@ namespace fiducial_vlam
       // then just make an empty image pointer. The routines need to check
       // that the pointer is valid before drawing into it.
       cv_bridge::CvImagePtr color_marked;
-      if (cxt_.publish_image_marked_) {
+      if (cxt_.publish_image_marked_ &&
+          count_subscribers(cxt_.image_marked_pub_topic_) > 0) {
         color_marked = color;
       }
 
@@ -220,7 +221,7 @@ namespace fiducial_vlam
             }
 
             // if requested, publish the camera tf as determined from each marker.
-            if (cxt_.publish_marker_tfs_) {
+            if (cxt_.publish_tfs_per_marker_) {
               auto t_map_cameras = localizer_.markers_t_map_cameras(observations, t_map_markers, fm);
               auto tf_message = to_markers_tf_message(stamp, observations, t_map_cameras);
               if (!tf_message.transforms.empty()) {
