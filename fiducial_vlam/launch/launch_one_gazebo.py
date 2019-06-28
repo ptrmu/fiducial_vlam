@@ -123,9 +123,11 @@ def generate_launch_description():
                  node_name='drone_base', node_namespace=namespace, parameters=[{
                     'use_sim_time': True,                       # Use /clock if available
                     'pid_x_kp': 0.2,
-                    'pid_x_kd': 0.1,
+                    'pid_x_ks': 0.12,
                     'pid_y_kp': 0.2,
-                    'pid_y_kd': 0.1,
+                    'pid_y_ks': 0.12,
+                    'pid_z_kp': 0.2,
+                    'pid_z_ks': 0.12,
                     'close_enough_xyz': 0.05,
                 }]),
         ])
