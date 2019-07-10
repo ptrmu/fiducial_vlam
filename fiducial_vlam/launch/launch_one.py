@@ -137,6 +137,15 @@ def generate_launch_description():
             Node(package='flock2', node_executable='drone_base', output='screen',
                  node_name='drone_base', node_namespace=namespace, parameters=[{
                     'use_sim_time': False,                       # Use /clock if available
+                    'pid_x_kp': 0.5,
+                    'pid_x_ks': 1.0,
+                    'pid_y_kp': 0.5,
+                    'pid_y_ks': 1.0,
+                    'pid_z_kp': 0.2,
+                    'pid_z_ks': 0.0,
+                    'pid_yaw_kp': 0.0,
+                    'pid_yaw_ks': 0.0,
+                    'close_enough_xyz': 0.15,
                 }]),
         ])
 
