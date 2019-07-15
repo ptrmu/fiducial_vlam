@@ -6,22 +6,22 @@ project(fiducial_vlam)
 #=============
 
 # Default to C99
-if(NOT CMAKE_C_STANDARD)
+if (NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
-endif()
+endif ()
 
 # Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
+if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
-endif()
+endif ()
 
 # Emulate colcon
-if($ENV{CLION_IDE})
+if ($ENV{CLION_IDE})
   message("Running inside CLion")
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
-endif()
+endif ()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
@@ -55,27 +55,29 @@ include_directories(
 
 # Debugging: set _dump_all_variables to true
 set(_dump_all_variables false)
-if(_dump_all_variables)
+if (_dump_all_variables)
   get_cmake_property(_variable_names VARIABLES)
   list(SORT _variable_names)
-  foreach(_variable_name ${_variable_names})
+  foreach (_variable_name ${_variable_names})
     message(STATUS "${_variable_name}=${${_variable_name}}")
-  endforeach()
-endif()
+  endforeach ()
+endif ()
 
 #=============
 # vloc node
 #=============
 
-add_executable(vloc_node
+add_executable(vloc_node_main
   src/vloc_node.cpp
   src/map.cpp
   src/convert_util.cpp
   src/transform_with_covariance.cpp
   src/fiducial_math.cpp
-  src/vloc_context.cpp)
+  src/vloc_context.cpp
+  src/vloc_node_main.cpp
+  )
 
-ament_target_dependencies(vloc_node
+ament_target_dependencies(vloc_node_main
   cv_bridge
   fiducial_vlam_msgs
   OpenCV
@@ -91,16 +93,17 @@ ament_target_dependencies(vloc_node
 # vmap node
 #=============
 
-add_executable(vmap_node
+add_executable(vmap_node_main
   src/vmap_node.cpp
   src/map.cpp
   src/convert_util.cpp
   src/transform_with_covariance.cpp
   src/fiducial_math.cpp
   src/vmap_context.cpp
+  src/vmap_node_main.cpp
   )
 
-ament_target_dependencies(vmap_node
+ament_target_dependencies(vmap_node_main
   fiducial_vlam_msgs
   geometry_msgs
   OpenCV
@@ -117,20 +120,23 @@ ament_target_dependencies(vmap_node
 #=============
 
 # Install targets
-install(
-  TARGETS
-  vloc_node
-  vmap_node
+install(TARGETS
+  vloc_node_main
+  vmap_node_main
   DESTINATION lib/fiducial_vlam
-)
+  )
 
 # Install various directories
-install(
-  DIRECTORY
+install(DIRECTORY
   cfg
   launch
   DESTINATION share/fiducial_vlam
-)
+  )
+
+ament_export_include_directories(include)
+
+install(DIRECTORY include/
+  DESTINATION include)
 
 #=============
 # Run ament macros

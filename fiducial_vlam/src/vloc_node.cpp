@@ -43,8 +43,8 @@ namespace fiducial_vlam
 
 
   public:
-    VlocNode()
-      : Node("vloc_node"), cxt_{*this}
+    VlocNode(rclcpp::NodeOptions &options)
+      : Node("vloc_node", options), cxt_{*this}
     {
       // Get parameters from the command line
       cxt_.load_parameters();
@@ -325,30 +325,9 @@ namespace fiducial_vlam
       pwc.covariance[35] = 2e-3;
     }
   };
-}
 
-// ==============================================================================
-// main()
-// ==============================================================================
-
-int main(int argc, char **argv)
-{
-  // Force flush of the stdout buffer
-  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
-
-  // Init ROS
-  rclcpp::init(argc, argv);
-
-  // Create node
-  auto node = std::make_shared<fiducial_vlam::VlocNode>();
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
-  (void) result;
-
-  // Spin until rclcpp::ok() returns false
-  rclcpp::spin(node);
-
-  // Shut down ROS
-  rclcpp::shutdown();
-
-  return 0;
+  std::shared_ptr<rclcpp::Node> vloc_node_factory(rclcpp::NodeOptions &options)
+  {
+    return std::shared_ptr<rclcpp::Node>(new VlocNode(options));
+  }
 }
