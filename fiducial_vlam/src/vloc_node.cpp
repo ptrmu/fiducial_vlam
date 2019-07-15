@@ -43,7 +43,7 @@ namespace fiducial_vlam
 
 
   public:
-    VlocNode(rclcpp::NodeOptions &options)
+    VlocNode(const rclcpp::NodeOptions &options)
       : Node("vloc_node", options), cxt_{*this}
     {
       // Get parameters from the command line
@@ -326,8 +326,12 @@ namespace fiducial_vlam
     }
   };
 
-  std::shared_ptr<rclcpp::Node> vloc_node_factory(rclcpp::NodeOptions &options)
+  std::shared_ptr<rclcpp::Node> vloc_node_factory(const rclcpp::NodeOptions &options)
   {
     return std::shared_ptr<rclcpp::Node>(new VlocNode(options));
   }
 }
+
+//#include "rclcpp_components/register_node_macro.hpp"
+//
+//RCLCPP_COMPONENTS_REGISTER_NODE(fiducial_vlam::VlocNode)

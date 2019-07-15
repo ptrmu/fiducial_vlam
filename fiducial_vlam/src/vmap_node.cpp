@@ -348,7 +348,7 @@ namespace fiducial_vlam
 
   public:
 
-    VmapNode(rclcpp::NodeOptions &options)
+    VmapNode(const rclcpp::NodeOptions &options)
       : Node("vmap_node", options), cxt_{*this}
     {
       // Get parameters from the command line
@@ -620,8 +620,12 @@ namespace fiducial_vlam
     }
   };
 
-  std::shared_ptr<rclcpp::Node> vmap_node_factory(rclcpp::NodeOptions &options)
+  std::shared_ptr<rclcpp::Node> vmap_node_factory(const rclcpp::NodeOptions &options)
   {
     return std::shared_ptr<rclcpp::Node>(new VmapNode(options));
   }
 }
+
+//#include "rclcpp_components/register_node_macro.hpp"
+//
+//RCLCPP_COMPONENTS_REGISTER_NODE(fiducial_vlam::VmapNode)
