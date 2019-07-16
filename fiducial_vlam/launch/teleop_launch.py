@@ -15,8 +15,8 @@ def generate_launch_description():
         Node(package='tello_driver', node_executable='tello_driver', output='screen'),
         Node(package='tello_driver', node_executable='tello_joy', output='screen'),
         Node(package='joy', node_executable='joy_node', output='screen'),
-        Node(package='fiducial_vlam', node_executable='vloc_node_main', output='screen'),
-        Node(package='fiducial_vlam', node_executable='vmap_node_main', output='screen',
+        Node(package='fiducial_vlam', node_executable='vloc_main', output='screen'),
+        Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
              node_name='vmap_node', parameters=[{
             'use_sim_time': False,                           # Use /clock if available
             'publish_tfs': 1,                               # Publish marker /tf

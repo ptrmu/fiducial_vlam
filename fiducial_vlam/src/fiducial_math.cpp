@@ -207,7 +207,7 @@ namespace fiducial_vlam
       return TransformWithCovariance(tf2_t_map_camera);
     }
 
-    Observations detect_markers(cv_bridge::CvImagePtr &color,
+    Observations detect_markers(cv_bridge::CvImageConstPtr &color,
                                 std::shared_ptr<cv_bridge::CvImage> &color_marked)
     {
       // Todo: make the dictionary a parameter
@@ -360,7 +360,7 @@ namespace fiducial_vlam
     return cv_->solve_t_map_camera(observations, t_map_markers, marker_length);
   }
 
-  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,
+  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage const> &color,
                                             std::shared_ptr<cv_bridge::CvImage> &color_marked)
   {
     return cv_->detect_markers(color, color_marked);
