@@ -129,7 +129,7 @@ def generate_launch_description():
             #     }]),
 
             # Driver
-            Node(package='tello_driver', node_executable='tello_driver', output='screen',
+            Node(package='tello_driver', node_executable='tello_driver_main', output='screen',
                  node_name='tello_driver', node_namespace=namespace,
                  parameters=tello_ros_args[idx]),
 

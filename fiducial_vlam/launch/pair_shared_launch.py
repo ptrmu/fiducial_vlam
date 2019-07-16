@@ -19,7 +19,7 @@ def generate_one_drone_action_list(drone_name):
     ns = drone_name
 
     return [
-        Node(package='tello_driver', node_executable='tello_driver', output='screen',
+        Node(package='tello_driver', node_executable='tello_driver_main', output='screen',
              node_name='tello_driver', node_namespace=ns),
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
              node_name='vloc_node', node_namespace=ns, parameters=[{
