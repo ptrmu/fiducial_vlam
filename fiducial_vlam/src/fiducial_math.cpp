@@ -207,7 +207,7 @@ namespace fiducial_vlam
       return TransformWithCovariance(tf2_t_map_camera);
     }
 
-    Observations detect_markers(cv_bridge::CvImageConstPtr &color,
+    Observations detect_markers(cv_bridge::CvImagePtr &gray,
                                 std::shared_ptr<cv_bridge::CvImage> &color_marked)
     {
       // Todo: make the dictionary a parameter
@@ -215,14 +215,10 @@ namespace fiducial_vlam
       auto detectorParameters = cv::aruco::DetectorParameters::create();
       detectorParameters->doCornerRefinement = true;
 
-      // Color to gray for detection
-      cv::Mat gray;
-      cv::cvtColor(color->image, gray, cv::COLOR_BGR2GRAY);
-
       // Detect markers
       std::vector<int> ids;
       std::vector<std::vector<cv::Point2f>> corners;
-      cv::aruco::detectMarkers(gray, dictionary, corners, ids, detectorParameters);
+      cv::aruco::detectMarkers(gray->image, dictionary, corners, ids, detectorParameters);
 
       // Annotate the markers
       if (color_marked) {
@@ -360,10 +356,10 @@ namespace fiducial_vlam
     return cv_->solve_t_map_camera(observations, t_map_markers, marker_length);
   }
 
-  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage const> &color,
+  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &gray,
                                             std::shared_ptr<cv_bridge::CvImage> &color_marked)
   {
-    return cv_->detect_markers(color, color_marked);
+    return cv_->detect_markers(gray, color_marked);
   }
 
   void FiducialMath::annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color_marked,
