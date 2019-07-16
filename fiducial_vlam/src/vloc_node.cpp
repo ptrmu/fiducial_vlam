@@ -332,6 +332,6 @@ namespace fiducial_vlam
   }
 }
 
-//#include "rclcpp_components/register_node_macro.hpp"
-//
-//RCLCPP_COMPONENTS_REGISTER_NODE(fiducial_vlam::VlocNode)
+#include "rclcpp_components/register_node_macro.hpp"
+
+RCLCPP_COMPONENTS_REGISTER_NODE(fiducial_vlam::VlocNode)
