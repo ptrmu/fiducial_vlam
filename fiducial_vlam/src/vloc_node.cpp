@@ -97,7 +97,7 @@ namespace fiducial_vlam
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
         rclcpp::ServicesQoS(),
-        [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
+        [this](sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // the stamp to use for all published messages derived from this image message.
           auto stamp{msg->header.stamp};
@@ -113,7 +113,7 @@ namespace fiducial_vlam
             // The stamp_msgs_with_current_time_ parameter can help this by replacing the
             // image message time with the current time.
             stamp = cxt_.stamp_msgs_with_current_time_ ? builtin_interfaces::msg::Time(now()) : stamp;
-            process_image(*msg, stamp);
+            process_image(std::move(msg), stamp);
           }
 
           last_image_stamp_ = stamp;
@@ -134,19 +134,30 @@ namespace fiducial_vlam
     }
 
   private:
-    void process_image(const sensor_msgs::msg::Image &image_msg, std_msgs::msg::Header::_stamp_type stamp)
+    void process_image(sensor_msgs::msg::Image::UniquePtr image_msg, std_msgs::msg::Header::_stamp_type stamp)
     {
       // Convert ROS to OpenCV
-      cv_bridge::CvImagePtr gray{cv_bridge::toCvCopy(image_msg, "mono8")};
+      cv_bridge::CvImagePtr gray{cv_bridge::toCvCopy(*image_msg, "mono8")};
 
       // If we are going to publish an annotated image, make a copy of
       // the original message image. If no annotated image is to be published,
       // then just make an empty image pointer. The routines need to check
       // that the pointer is valid before drawing into it.
       cv_bridge::CvImagePtr color_marked;
+      cv::Mat mat_with_msg_data;
       if (cxt_.publish_image_marked_ &&
           count_subscribers(cxt_.image_marked_pub_topic_) > 0) {
-        color_marked = cv_bridge::toCvCopy(image_msg);
+        // The toCvShare only makes ConstCvImage because they don't want
+        // to modify the original message data. I want to modify the original
+        // data so I create another CvImage that is not const and steal the
+        // image data.
+        std::shared_ptr<void const> tracked_object;
+        auto const_color_marked = cv_bridge::toCvShare(*image_msg, tracked_object);
+        mat_with_msg_data = const_color_marked->image; // opencv does not copy the image data on assignment
+        color_marked = cv_bridge::CvImagePtr{
+          new cv_bridge::CvImage{const_color_marked->header,
+                                 const_color_marked->encoding,
+                                 mat_with_msg_data}};
       }
 
       FiducialMath fm(*camera_info_);
@@ -230,7 +241,7 @@ namespace fiducial_vlam
             }
 
             // Publish the observations
-            auto observations_msg = observations.to_msg(stamp, image_msg.header.frame_id, *camera_info_msg_);
+            auto observations_msg = observations.to_msg(stamp, image_msg->header.frame_id, *camera_info_msg_);
             observations_pub_->publish(observations_msg);
           }
         }
@@ -238,9 +249,9 @@ namespace fiducial_vlam
 
       // Publish an annotated image if requested. Even if there is no map.
       if (color_marked) {
-        auto marked_image_msg{color_marked->toImageMsg()};
-        marked_image_msg->header = image_msg.header;
-        image_marked_pub_->publish(*marked_image_msg);
+        // The marking has been happening on the original message.
+        // Republish it now.
+        image_marked_pub_->publish(std::move(image_msg));
       }
     }
 
