@@ -96,7 +96,7 @@ namespace fiducial_vlam
 
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
-        rclcpp::ServicesQoS(),
+        rclcpp::QoS{1},  // Don't keep stale images
         [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // the stamp to use for all published messages derived from this image message.

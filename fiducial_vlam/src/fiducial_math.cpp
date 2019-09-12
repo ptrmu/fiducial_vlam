@@ -213,7 +213,12 @@ namespace fiducial_vlam
       // Todo: make the dictionary a parameter
       auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
       auto detectorParameters = cv::aruco::DetectorParameters::create();
+#if (CV_VERSION_MAJOR == 4)
+      // Use the new AprilTag 2 corner algorithm, much better but much slower
+      detectorParameters->cornerRefinementMethod = cv::aruco::CornerRefineMethod::CORNER_REFINE_APRILTAG;
+#else
       detectorParameters->doCornerRefinement = true;
+#endif
 
       // Color to gray for detection
       cv::Mat gray;
