@@ -43,8 +43,8 @@ namespace fiducial_vlam
 
 
   public:
-    VlocNode()
-      : Node("vloc_node"), cxt_{*this}
+    VlocNode(const rclcpp::NodeOptions &options)
+      : Node("vloc_node", options), cxt_{*this}
     {
       // Get parameters from the command line
       cxt_.load_parameters();
@@ -96,8 +96,8 @@ namespace fiducial_vlam
 
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
-        rclcpp::QoS{1},  // Don't keep stale images
-        [this](const sensor_msgs::msg::Image::UniquePtr msg) -> void
+        rclcpp::ServicesQoS(rclcpp::KeepLast(1)),
+        [this](sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // the stamp to use for all published messages derived from this image message.
           auto stamp{msg->header.stamp};
@@ -113,7 +113,7 @@ namespace fiducial_vlam
             // The stamp_msgs_with_current_time_ parameter can help this by replacing the
             // image message time with the current time.
             stamp = cxt_.stamp_msgs_with_current_time_ ? builtin_interfaces::msg::Time(now()) : stamp;
-            process_image(*msg, stamp);
+            process_image(std::move(msg), stamp);
           }
 
           last_image_stamp_ = stamp;
@@ -134,26 +134,37 @@ namespace fiducial_vlam
     }
 
   private:
-    void process_image(const sensor_msgs::msg::Image &image_msg, std_msgs::msg::Header::_stamp_type stamp)
+    void process_image(sensor_msgs::msg::Image::UniquePtr image_msg, std_msgs::msg::Header::_stamp_type stamp)
     {
       // Convert ROS to OpenCV
-      cv_bridge::CvImagePtr color = cv_bridge::toCvCopy(image_msg);
+      cv_bridge::CvImagePtr gray{cv_bridge::toCvCopy(*image_msg, "mono8")};
 
       // If we are going to publish an annotated image, make a copy of
-      // the pointer to color. If no annotated image is to be published,
+      // the original message image. If no annotated image is to be published,
       // then just make an empty image pointer. The routines need to check
       // that the pointer is valid before drawing into it.
       cv_bridge::CvImagePtr color_marked;
+      cv::Mat mat_with_msg_data;
       if (cxt_.publish_image_marked_ &&
           count_subscribers(cxt_.image_marked_pub_topic_) > 0) {
-        color_marked = color;
+        // The toCvShare only makes ConstCvImage because they don't want
+        // to modify the original message data. I want to modify the original
+        // data so I create another CvImage that is not const and steal the
+        // image data.
+        std::shared_ptr<void const> tracked_object;
+        auto const_color_marked = cv_bridge::toCvShare(*image_msg, tracked_object);
+        mat_with_msg_data = const_color_marked->image; // opencv does not copy the image data on assignment
+        color_marked = cv_bridge::CvImagePtr{
+          new cv_bridge::CvImage{const_color_marked->header,
+                                 const_color_marked->encoding,
+                                 mat_with_msg_data}};
       }
 
       FiducialMath fm(*camera_info_);
 
       // Detect the markers in this image and create a list of
       // observations.
-      auto observations = fm.detect_markers(color, color_marked);
+      auto observations = fm.detect_markers(gray, color_marked);
 
       // If there is a map, find t_map_marker for each detected
       // marker. The t_map_markers has an entry for each element
@@ -230,7 +241,7 @@ namespace fiducial_vlam
             }
 
             // Publish the observations
-            auto observations_msg = observations.to_msg(stamp, image_msg.header.frame_id, *camera_info_msg_);
+            auto observations_msg = observations.to_msg(stamp, image_msg->header.frame_id, *camera_info_msg_);
             observations_pub_->publish(observations_msg);
           }
         }
@@ -238,9 +249,9 @@ namespace fiducial_vlam
 
       // Publish an annotated image if requested. Even if there is no map.
       if (color_marked) {
-        auto marked_image_msg{color->toImageMsg()};
-        marked_image_msg->header = image_msg.header;
-        image_marked_pub_->publish(*marked_image_msg);
+        // The marking has been happening on the original message.
+        // Republish it now.
+        image_marked_pub_->publish(std::move(image_msg));
       }
     }
 
@@ -325,30 +336,13 @@ namespace fiducial_vlam
       pwc.covariance[35] = 2e-3;
     }
   };
+
+  std::shared_ptr<rclcpp::Node> vloc_node_factory(const rclcpp::NodeOptions &options)
+  {
+    return std::shared_ptr<rclcpp::Node>(new VlocNode(options));
+  }
 }
 
-// ==============================================================================
-// main()
-// ==============================================================================
+#include "rclcpp_components/register_node_macro.hpp"
 
-int main(int argc, char **argv)
-{
-  // Force flush of the stdout buffer
-  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
-
-  // Init ROS
-  rclcpp::init(argc, argv);
-
-  // Create node
-  auto node = std::make_shared<fiducial_vlam::VlocNode>();
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
-  (void) result;
-
-  // Spin until rclcpp::ok() returns false
-  rclcpp::spin(node);
-
-  // Shut down ROS
-  rclcpp::shutdown();
-
-  return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE(fiducial_vlam::VlocNode)

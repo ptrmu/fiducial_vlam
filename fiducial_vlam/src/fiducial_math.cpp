@@ -207,27 +207,28 @@ namespace fiducial_vlam
       return TransformWithCovariance(tf2_t_map_camera);
     }
 
-    Observations detect_markers(cv_bridge::CvImagePtr &color,
+    Observations detect_markers(cv_bridge::CvImagePtr &gray,
                                 std::shared_ptr<cv_bridge::CvImage> &color_marked)
     {
       // Todo: make the dictionary a parameter
       auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
       auto detectorParameters = cv::aruco::DetectorParameters::create();
 #if (CV_VERSION_MAJOR == 4)
-      // Use the new AprilTag 2 corner algorithm, much better but much slower
-      detectorParameters->cornerRefinementMethod = cv::aruco::CornerRefineMethod::CORNER_REFINE_APRILTAG;
+//     0 = CORNER_REFINE_NONE,     ///< Tag and corners detection based on the ArUco approach
+//     1 = CORNER_REFINE_SUBPIX,   ///< ArUco approach and refine the corners locations using corner subpixel accuracy
+//     2 = CORNER_REFINE_CONTOUR,  ///< ArUco approach and refine the corners locations using the contour-points line fitting
+//     3 = CORNER_REFINE_APRILTAG, ///< Tag and corners detection based on the AprilTag 2 approach @cite wang2016iros
+
+        // Potentially use the new AprilTag 2 corner algorithm, much better but much slower
+      detectorParameters->cornerRefinementMethod = cv::aruco::CornerRefineMethod::CORNER_REFINE_CONTOUR;
 #else
       detectorParameters->doCornerRefinement = true;
 #endif
 
-      // Color to gray for detection
-      cv::Mat gray;
-      cv::cvtColor(color->image, gray, cv::COLOR_BGR2GRAY);
-
       // Detect markers
       std::vector<int> ids;
       std::vector<std::vector<cv::Point2f>> corners;
-      cv::aruco::detectMarkers(gray, dictionary, corners, ids, detectorParameters);
+      cv::aruco::detectMarkers(gray->image, dictionary, corners, ids, detectorParameters);
 
       // Annotate the markers
       if (color_marked) {
@@ -365,10 +366,10 @@ namespace fiducial_vlam
     return cv_->solve_t_map_camera(observations, t_map_markers, marker_length);
   }
 
-  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,
+  Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &gray,
                                             std::shared_ptr<cv_bridge::CvImage> &color_marked)
   {
-    return cv_->detect_markers(color, color_marked);
+    return cv_->detect_markers(gray, color_marked);
   }
 
   void FiducialMath::annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color_marked,

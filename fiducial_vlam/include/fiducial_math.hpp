@@ -62,7 +62,7 @@ namespace fiducial_vlam
                                                const std::vector<TransformWithCovariance> &t_map_markers,
                                                double marker_length);
 
-    Observations detect_markers(std::shared_ptr<cv_bridge::CvImage> &color,
+    Observations detect_markers(std::shared_ptr<cv_bridge::CvImage> &gray,
                                 std::shared_ptr<cv_bridge::CvImage> &color_marked);
 
     void annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color,

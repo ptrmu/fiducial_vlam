@@ -97,9 +97,9 @@ namespace fiducial_vlam
   t_camera_base_yaw, \
   double, 0.) \
   \
-  CXT_MACRO_MEMBER(       /* subscribe to camera_info message with best_effort (gazebo camera) not reliable (tello_ros) */ \
+  CXT_MACRO_MEMBER(       /* subscribe to camera_info message with best_effort (gazebo camera, tello_driver)  */ \
   sub_camera_info_best_effort_not_reliable, \
-  int, 0) \
+  int, 1) \
   /* End of list */
 
 #define VLOC_ALL_OTHERS \

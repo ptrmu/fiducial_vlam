@@ -348,8 +348,8 @@ namespace fiducial_vlam
 
   public:
 
-    VmapNode()
-      : Node("vmap_node"), cxt_{*this}
+    VmapNode(const rclcpp::NodeOptions &options)
+      : Node("vmap_node", options), cxt_{*this}
     {
       // Get parameters from the command line
       cxt_.load_parameters();
@@ -619,30 +619,13 @@ namespace fiducial_vlam
       return map_unique;
     }
   };
+
+  std::shared_ptr<rclcpp::Node> vmap_node_factory(const rclcpp::NodeOptions &options)
+  {
+    return std::shared_ptr<rclcpp::Node>(new VmapNode(options));
+  }
 }
 
-// ==============================================================================
-// main()
-// ==============================================================================
+#include "rclcpp_components/register_node_macro.hpp"
 
-int main(int argc, char **argv)
-{
-  // Force flush of the stdout buffer
-  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
-
-  // Init ROS
-  rclcpp::init(argc, argv);
-
-  // Create node
-  auto node = std::make_shared<fiducial_vlam::VmapNode>();
-  auto result = rcutils_logging_set_logger_level(node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_INFO);
-  (void) result;
-
-  // Spin until rclcpp::ok() returns false
-  rclcpp::spin(node);
-
-  // Shut down ROS
-  rclcpp::shutdown();
-
-  return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE(fiducial_vlam::VmapNode)
