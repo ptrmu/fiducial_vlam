@@ -20,7 +20,7 @@ namespace fiducial_vlam
   {
     geometry_msgs::msg::PoseWithCovariance msg;
     msg.pose = to_Pose_msg(twc);
-    //msg.set__covariance() // ToDo move over the covariance
+    msg.covariance = twc.cov();
     return msg;
   }
 
@@ -40,7 +40,7 @@ namespace fiducial_vlam
   {
     tf2::Transform tf;
     fromMsg(pwc.pose, tf);
-    return TransformWithCovariance(tf);
+    return TransformWithCovariance(tf, pwc.covariance);
   }
 }
 

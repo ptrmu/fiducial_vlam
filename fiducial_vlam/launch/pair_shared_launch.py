@@ -19,10 +19,10 @@ def generate_one_drone_action_list(drone_name):
     ns = drone_name
 
     return [
-        Node(package='tello_driver', node_executable='tello_driver_main', output='screen',
+        Node(package='tello_driver', node_executable='tello_driver', output='screen',
              node_name='tello_driver', node_namespace=ns),
         Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-             node_name='vloc_node', node_namespace=ns, parameters=[{
+             node_name='vloc_main', node_namespace=ns, parameters=[{
                 'camera_tf_pub_topic': '/tf',
                 'camera_frame_id': drone_name + '_camera'
             }]),
@@ -35,7 +35,7 @@ def generate_primary_action_list(drone_name, computer_name):
     main_actions = [
         generate_rviz_execute_process(computer_name),
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
-             node_name='vmap_node', parameters=[{
+             node_name='vmap_main', parameters=[{
                 'make_not_use_map': 0,
                 'marker_map_load_full_filename': _map_filename
             }]),

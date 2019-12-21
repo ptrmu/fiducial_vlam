@@ -213,7 +213,17 @@ namespace fiducial_vlam
       // Todo: make the dictionary a parameter
       auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
       auto detectorParameters = cv::aruco::DetectorParameters::create();
+#if (CV_VERSION_MAJOR == 4)
+//     0 = CORNER_REFINE_NONE,     ///< Tag and corners detection based on the ArUco approach
+//     1 = CORNER_REFINE_SUBPIX,   ///< ArUco approach and refine the corners locations using corner subpixel accuracy
+//     2 = CORNER_REFINE_CONTOUR,  ///< ArUco approach and refine the corners locations using the contour-points line fitting
+//     3 = CORNER_REFINE_APRILTAG, ///< Tag and corners detection based on the AprilTag 2 approach @cite wang2016iros
+
+        // Potentially use the new AprilTag 2 corner algorithm, much better but much slower
+      detectorParameters->cornerRefinementMethod = cv::aruco::CornerRefineMethod::CORNER_REFINE_CONTOUR;
+#else
       detectorParameters->doCornerRefinement = true;
+#endif
 
       // Detect markers
       std::vector<int> ids;

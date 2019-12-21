@@ -57,7 +57,7 @@ def generate_launch_description():
 
         # Load and publish a known map
         Node(package='fiducial_vlam', node_executable='vmap_main', output='screen',
-             node_name='vmap_node', parameters=[{
+             node_name='vmap_main', parameters=[{
                 'use_sim_time': False,                           # Use /clock if available
                 'publish_tfs': 1,                               # Publish marker /tf
                 'marker_length': 0.1778,                        # Marker length
@@ -108,7 +108,7 @@ def generate_launch_description():
             # Localize this drone against the map
             # Future: need odometry for base_link, not camera_link
             Node(package='fiducial_vlam', node_executable='vloc_main', output='screen',
-                 node_name='vloc_node', node_namespace=namespace, parameters=[{
+                 node_name='vloc_main', node_namespace=namespace, parameters=[{
                     'use_sim_time': False,                       # Use /clock if available
                     'publish_tfs': 1,                           # Publish drone and camera /tf
                     'stamp_msgs_with_current_time': 0,          # Use incoming message time, not now()
@@ -129,7 +129,7 @@ def generate_launch_description():
             #     }]),
 
             # Driver
-            Node(package='tello_driver', node_executable='tello_driver_main', output='screen',
+            Node(package='tello_driver', node_executable='tello_driver', output='screen',
                  node_name='tello_driver', node_namespace=namespace,
                  parameters=tello_ros_args[idx]),
 
