@@ -225,10 +225,6 @@ namespace fiducial_vlam
       detectorParameters->doCornerRefinement = true;
 #endif
 
-      // Color to gray for detection
-      cv::Mat gray;
-      cv::cvtColor(color->image, gray, cv::COLOR_BGR2GRAY);
-
       // Detect markers
       std::vector<int> ids;
       std::vector<std::vector<cv::Point2f>> corners;
