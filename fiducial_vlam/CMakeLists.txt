@@ -162,7 +162,24 @@ ament_target_dependencies(vmap_main
 # Install
 #=============
 
-# Install targets
+# Install composable nodes
+install(TARGETS
+  vloc_node
+  EXPORT export_vloc_node
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  )
+
+install(TARGETS
+  vmap_node
+  EXPORT export_vmap_node
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  )
+
+# Install executables
 install(TARGETS
   vloc_main
   vmap_main
@@ -176,10 +193,22 @@ install(DIRECTORY
   DESTINATION share/fiducial_vlam
   )
 
-ament_export_include_directories(include)
-
 install(DIRECTORY include/
   DESTINATION include)
+
+
+#=============
+# Export
+#=============
+
+ament_export_dependencies(class_loader yaml_cpp_vendor)
+
+ament_export_include_directories(include)
+
+ament_export_interfaces(export_vloc_node export_vmap_node)
+
+ament_export_libraries(vloc_node vmap_node)
+
 
 #=============
 # Run ament macros
