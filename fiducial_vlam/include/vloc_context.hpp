@@ -100,6 +100,13 @@ namespace fiducial_vlam
   CXT_MACRO_MEMBER(       /* subscribe to camera_info message with best_effort (gazebo camera, tello_driver)  */ \
   sub_camera_info_best_effort_not_reliable, \
   int, 1) \
+  CXT_MACRO_MEMBER(       /* subscribe to image_raw message with best_effort (gazebo camera, tello_driver)  */ \
+  sub_image_raw_best_effort_not_reliable, \
+  int, 1) \
+  \
+  CXT_MACRO_MEMBER(       /* opencv4 aruco corner refinement method  */ \
+  corner_refinement_method, \
+  int, 2) \
   /* End of list */
 
 #define VLOC_ALL_OTHERS \

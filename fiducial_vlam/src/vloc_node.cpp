@@ -61,7 +61,7 @@ namespace fiducial_vlam
         base_pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
           cxt_.base_pose_pub_topic_, 16);
       }
-      if (cxt_.publish_tfs_) {
+      if (cxt_.publish_tfs_ || cxt_.publish_tfs_per_marker_) {
         tf_message_pub_ = create_publisher<tf2_msgs::msg::TFMessage>(
           "/tf", 16);
       }
@@ -80,7 +80,7 @@ namespace fiducial_vlam
 
       // ROS subscriptions
       auto camera_info_qos = cxt_.sub_camera_info_best_effort_not_reliable_ ?
-                             rclcpp::QoS{rclcpp::SensorDataQoS()} :
+                             rclcpp::QoS{rclcpp::SensorDataQoS(rclcpp::KeepLast(1))} :
                              rclcpp::QoS{rclcpp::ServicesQoS()};
       camera_info_sub_ = create_subscription<sensor_msgs::msg::CameraInfo>(
         cxt_.camera_info_sub_topic_,
@@ -94,9 +94,12 @@ namespace fiducial_vlam
           }
         });
 
+      auto image_raw_qos = cxt_.sub_image_raw_best_effort_not_reliable_ ?
+                             rclcpp::QoS{rclcpp::SensorDataQoS(rclcpp::KeepLast(1))} :
+                             rclcpp::QoS{rclcpp::ServicesQoS()};
       image_raw_sub_ = create_subscription<sensor_msgs::msg::Image>(
         cxt_.image_raw_sub_topic_,
-        rclcpp::ServicesQoS(rclcpp::KeepLast(1)),
+        image_raw_qos,
         [this](sensor_msgs::msg::Image::UniquePtr msg) -> void
         {
           // the stamp to use for all published messages derived from this image message.
@@ -164,7 +167,7 @@ namespace fiducial_vlam
 
       // Detect the markers in this image and create a list of
       // observations.
-      auto observations = fm.detect_markers(gray, color_marked);
+      auto observations = fm.detect_markers(gray, color_marked, cxt_.corner_refinement_method_);
 
       // If there is a map, find t_map_marker for each detected
       // marker. The t_map_markers has an entry for each element

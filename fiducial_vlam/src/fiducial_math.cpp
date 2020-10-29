@@ -208,7 +208,8 @@ namespace fiducial_vlam
     }
 
     Observations detect_markers(cv_bridge::CvImagePtr &gray,
-                                std::shared_ptr<cv_bridge::CvImage> &color_marked)
+                                std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                int corner_refinement_method)
     {
       // Todo: make the dictionary a parameter
       auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
@@ -219,8 +220,9 @@ namespace fiducial_vlam
 //     2 = CORNER_REFINE_CONTOUR,  ///< ArUco approach and refine the corners locations using the contour-points line fitting
 //     3 = CORNER_REFINE_APRILTAG, ///< Tag and corners detection based on the AprilTag 2 approach @cite wang2016iros
 
-        // Potentially use the new AprilTag 2 corner algorithm, much better but much slower
-      detectorParameters->cornerRefinementMethod = cv::aruco::CornerRefineMethod::CORNER_REFINE_CONTOUR;
+      // Potentially use the new AprilTag 2 corner algorithm, much better but much slower
+      // detectorParameters->cornerRefinementMethod = cv::aruco::CornerRefineMethod::CORNER_REFINE_CONTOUR;
+      detectorParameters->cornerRefinementMethod = corner_refinement_method;
 #else
       detectorParameters->doCornerRefinement = true;
 #endif
@@ -367,9 +369,10 @@ namespace fiducial_vlam
   }
 
   Observations FiducialMath::detect_markers(std::shared_ptr<cv_bridge::CvImage> &gray,
-                                            std::shared_ptr<cv_bridge::CvImage> &color_marked)
+                                            std::shared_ptr<cv_bridge::CvImage> &color_marked,
+                                            int corner_refinement_method)
   {
-    return cv_->detect_markers(gray, color_marked);
+    return cv_->detect_markers(gray, color_marked, corner_refinement_method);
   }
 
   void FiducialMath::annotate_image_with_marker_axis(std::shared_ptr<cv_bridge::CvImage> &color_marked,
