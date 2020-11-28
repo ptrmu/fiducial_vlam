@@ -208,7 +208,7 @@ ament_export_dependencies(class_loader yaml_cpp_vendor)
 
 ament_export_include_directories(include)
 
-ament_export_interfaces(export_vloc_node export_vmap_node)
+ament_export_targets(export_vloc_node export_vmap_node)
 
 ament_export_libraries(vloc_node vmap_node)
 

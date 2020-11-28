@@ -13,8 +13,8 @@ namespace fiducial_vlam
 
 
 #undef CXT_MACRO_MEMBER
-#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED((*this), n, t)
-    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node_, VMAP_ALL_PARAMS, validate_parameters)
+#define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_PARAMETER_CHANGED(n, t)
+    CXT_MACRO_REGISTER_PARAMETERS_CHANGED(node_, (*this), VMAP_ALL_PARAMS, validate_parameters)
 
     RCLCPP_INFO(node_.get_logger(), "VmapNode Parameters");
 

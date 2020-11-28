@@ -109,12 +109,6 @@ namespace fiducial_vlam
   int, 2) \
   /* End of list */
 
-#define VLOC_ALL_OTHERS \
-  CXT_MACRO_MEMBER(       /* transform from base frame to camera frame */ \
-  t_camera_base,  \
-  TransformWithCovariance,) \
-  /* End of list */
-
   struct VlocContext
   {
     rclcpp::Node &node_;
@@ -125,8 +119,8 @@ namespace fiducial_vlam
 
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
-    VLOC_ALL_PARAMS
-    VLOC_ALL_OTHERS
+    CXT_MACRO_DEFINE_MEMBERS(VLOC_ALL_PARAMS)
+      TransformWithCovariance t_camera_base_{};
 
     void load_parameters();
 

@@ -78,12 +78,6 @@ namespace fiducial_vlam
   double, 0.1627) \
   /* End of list */
 
-#define VMAP_ALL_OTHERS \
-  CXT_MACRO_MEMBER(       /* A transform derived from individual parameters */ \
-  map_init_transform,  \
-  TransformWithCovariance,) \
-  /* End of list */
-
   struct VmapContext
   {
     rclcpp::Node &node_;
@@ -94,8 +88,8 @@ namespace fiducial_vlam
 
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
-    VMAP_ALL_PARAMS
-    VMAP_ALL_OTHERS
+    CXT_MACRO_DEFINE_MEMBERS(VMAP_ALL_PARAMS)
+    TransformWithCovariance  map_init_transform_{};
 
     void load_parameters();
 
