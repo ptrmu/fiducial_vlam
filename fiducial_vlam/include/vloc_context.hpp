@@ -100,12 +100,13 @@ namespace fiducial_vlam
   CXT_MACRO_MEMBER(       /* subscribe to camera_info message with best_effort (gazebo camera, tello_driver)  */ \
   sub_camera_info_best_effort_not_reliable, \
   int, 1) \
-  /* End of list */
-
-#define VLOC_ALL_OTHERS \
-  CXT_MACRO_MEMBER(       /* transform from base frame to camera frame */ \
-  t_camera_base,  \
-  TransformWithCovariance,) \
+  CXT_MACRO_MEMBER(       /* subscribe to image_raw message with best_effort (gazebo camera, tello_driver)  */ \
+  sub_image_raw_best_effort_not_reliable, \
+  int, 1) \
+  \
+  CXT_MACRO_MEMBER(       /* opencv4 aruco corner refinement method  */ \
+  corner_refinement_method, \
+  int, 2) \
   /* End of list */
 
   struct VlocContext
@@ -118,8 +119,8 @@ namespace fiducial_vlam
 
 #undef CXT_MACRO_MEMBER
 #define CXT_MACRO_MEMBER(n, t, d) CXT_MACRO_DEFINE_MEMBER(n, t, d)
-    VLOC_ALL_PARAMS
-    VLOC_ALL_OTHERS
+    CXT_MACRO_DEFINE_MEMBERS(VLOC_ALL_PARAMS)
+      TransformWithCovariance t_camera_base_{};
 
     void load_parameters();
 

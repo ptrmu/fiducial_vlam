@@ -18,6 +18,9 @@ endif ()
 # Emulate colcon
 if ($ENV{CLION_IDE})
   message(STATUS "Running inside CLion")
+  find_package(fastrtps_cmake_module REQUIRED)
+  set(FastRTPS_INCLUDE_DIR "/opt/ros/foxy/include")
+  set(FastRTPS_LIBRARY_RELEASE "/opt/ros/foxy/lib/libfastrtps.so")
   set(fiducial_vlam_msgs_DIR "${PROJECT_SOURCE_DIR}/../../../install/fiducial_vlam_msgs/share/fiducial_vlam_msgs/cmake")
   set(ros2_shared_DIR "${PROJECT_SOURCE_DIR}/../../../install/ros2_shared/share/ros2_shared/cmake")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRUN_INSIDE_CLION")
@@ -205,7 +208,7 @@ ament_export_dependencies(class_loader yaml_cpp_vendor)
 
 ament_export_include_directories(include)
 
-ament_export_interfaces(export_vloc_node export_vmap_node)
+ament_export_targets(export_vloc_node export_vmap_node)
 
 ament_export_libraries(vloc_node vmap_node)
 
