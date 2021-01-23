@@ -254,6 +254,9 @@ namespace fiducial_vlam
       if (color_marked) {
         // The marking has been happening on the original message.
         // Republish it now.
+        if (cxt_.stamp_msgs_with_current_time_) {
+          image_msg->header.stamp = now();
+        }
         image_marked_pub_->publish(std::move(image_msg));
       }
     }
