@@ -212,7 +212,7 @@ namespace fiducial_vlam
                                 int corner_refinement_method)
     {
       // Todo: make the dictionary a parameter
-      auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+      auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
       auto detectorParameters = cv::aruco::DetectorParameters::create();
 #if (CV_VERSION_MAJOR == 4)
 //     0 = CORNER_REFINE_NONE,     ///< Tag and corners detection based on the ArUco approach
